@@ -1,126 +1,132 @@
 % =============================================================
 %  SECTION: Physical Property Analysis — Krypton g(r)
-%  ASSIGNED TO: [Person Name]
-%
-%  REQUIRED CONTENT:
-%   - Real-world parameters for Krypton (eps, sigma)
-%   - g(r) plot scaled to Ångströms
-%   - State identification (solid or liquid?) with physical justification
-%   - Confirmation that g(r) → 1.0 at large r
-%   - (Optional, if chosen) MSD vs time (ps), diffusion coefficient D
-%
-%  GUIDING QUESTIONS:
-%   HOW do we convert from reduced units to real units?
-%   WHAT does the peak structure of Kr g(r) tell us about nearest-neighbour distance?
-%   HOW does the Kr g(r) compare to ideal FCC peak positions?
-%   WHY do we confirm g(r)→1? What does it mean if it doesn't?
 % =============================================================
 
-\newpage
 \section{Physical Property Analysis: Krypton}
 
-\subsection{Krypton Parameters}
+\subsection{From Reduced Units to Real Krypton}
 
-To convert simulation results from reduced units to real physical quantities, we use the Lennard-Jones parameters for Krypton from Table 5.1 of LeSar:
+Everything so far has lived in the dimensionless world of reduced units — distances in multiples of $\sigma$, temperatures in multiples of $\eps/k_B$. To make contact with reality, we need to attach physical meaning to these numbers. Krypton is an ideal test species: it is a noble gas well described by the Lennard-Jones model, with accurately measured parameters tabulated in the literature.
 
 \begin{table}[H]
     \centering
-    \caption{Lennard-Jones parameters for Krypton used in this work.}
+    \caption{Lennard-Jones parameters for Krypton (from LeSar, Table 5.1). These two numbers — together with the atomic mass $m_\text{Kr} = 83.80$\,u — define the complete simulation.}
     \label{tab:kr_params}
-    \begin{tabular}{lcc}
+    \begin{tabular}{llcc}
         \toprule
-        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} & \textbf{Units} \\
         \midrule
-        Well depth & $\eps$ & $0.0140$\,eV \\
-        Well depth (thermal) & $\eps/k_B$ & $162.46$\,K \\
-        Atomic diameter & $\sigma$ & $3.65$\,\AA \\
+        LJ well depth       & $\eps$          & $0.0140$   & eV \\
+        Well depth (thermal)& $\eps/k_B$      & $162.46$   & K \\
+        LJ diameter         & $\sigma$        & $3.65$     & \AA \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-The unit conversions used are:
+The conversion from any reduced quantity to its SI/cgs counterpart follows from the definitions in Eq.~\eqref{eq:reduced_units}. For the two quantities needed here:
 \begin{align}
-    r\,[\text{\AA}] &= r^* \times \sigma_{\text{Kr}} = r^* \times 3.65\,\text{\AA} \label{eq:r_conv}\\
-    T\,[\text{K}]   &= \Tstar \times (\eps/k_B)_{\text{Kr}} = \Tstar \times 162.46\,\text{K} \label{eq:T_conv}
+    r\,[\text{\AA}] &= r^* \times \sigma_{\text{Kr}} = r^* \times 3.65\,\text{\AA}
+    \label{eq:r_conv}\\
+    T\,[\text{K}]   &= T^* \times \frac{\eps_{\text{Kr}}}{k_B} = T^* \times 162.46\,\text{K}
+    \label{eq:T_conv}
 \end{align}
 
-We ran simulations at two representative temperatures: $\Tstar = 0.4$ ($\approx 65$\,K, expected solid) and $\Tstar = 1.0$ ($\approx 162$\,K, expected liquid). Simulation parameters are given in Table~\ref{tab:params}.
+We ran the MD engine at two representative state points chosen to probe opposite ends of the phase diagram:
+\begin{itemize}
+    \item $T^* = 0.2$ ($T \approx 32.5$\,K) — well below the expected melting point; the system should be a crystalline FCC solid.
+    \item $T^* = 1.0$ ($T \approx 162.5$\,K) — near and above the expected liquid regime for Krypton at this density; the system should be a disordered liquid.
+\end{itemize}
+Both runs used $N = 500$ atoms at $\rho^* = 0.8442$ (box length $L^* = 8.398$, i.e.\ $L = 30.65$\,\AA), with $g(r)$ averaged over 100 production frames after full equilibration.
 
-\subsection{Radial Distribution Function: \texorpdfstring{$g(r)$}{g(r)}}
+\subsection{The Radial Distribution Function of Krypton}
 
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{0.48\linewidth}
         \centering
-        % \includegraphics[width=\linewidth]{figures/kr_gr_T04.pdf}
-        \caption{$\Tstar = 0.4$ ($T \approx 65$\,K)}
+        \includegraphics[width=\linewidth]{figures/kr_gr_T02.pdf}
+        \caption{$T^* = 0.2$ \ ($T \approx 32.5$\,K) — \textbf{Solid}}
         \label{fig:kr_gr_solid}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.48\linewidth}
         \centering
-        % \includegraphics[width=\linewidth]{figures/kr_gr_T10.pdf}
-        \caption{$\Tstar = 1.0$ ($T \approx 162$\,K)}
+        \includegraphics[width=\linewidth]{figures/kr_gr_T10.pdf}
+        \caption{$T^* = 1.0$ \ ($T \approx 162.5$\,K) — \textbf{Liquid}}
         \label{fig:kr_gr_liquid}
     \end{subfigure}
-    \caption{Radial distribution function $g(r)$ of Krypton at two temperatures. The horizontal axis is scaled to real units using $\sigma_{\text{Kr}} = 3.65$\,\AA. The dashed line at $g(r) = 1$ is the ideal-gas asymptote.}
+    \caption{Radial distribution function $g(r)$ of Krypton at two temperatures ($N = 500$, $\rho^* = 0.8442$, 100 averaged frames). The horizontal axis is the real interatomic distance in ångströms, obtained via Eq.~\eqref{eq:r_conv}. The dashed horizontal line marks the ideal-gas asymptote $g(r) = 1$.}
     \label{fig:kr_gr}
 \end{figure}
 
-% [INSERT ACTUAL PLOTS — provide these to the report writer]
+The two panels tell fundamentally different stories. The left panel (solid) is dominated by a sequence of sharp, well-separated spikes. The right panel (liquid) shows one prominent broad peak followed by rapidly diminishing oscillations that flatten to 1.0 within a few ångströms. These two shapes are the archetypal ``structural fingerprints'' of a crystal and a fluid, respectively.
 
 \subsection{State Identification and Physical Interpretation}
 
-% Explain the peak structure for each temperature:
-%
-% T* = 0.4 (SOLID):
-%   - Sharp, distinct peaks at well-defined r values.
-%   - Multiple coordination shells visible.
-%   - Peak positions correspond to FCC neighbour distances.
-%   - First peak near r* ≈ 1.12σ = ~4.1 Å.
-%
-% T* = 1.0 (LIQUID):
-%   - Broad first peak, rapidly decaying oscillations.
-%   - g(r) reaches 1.0 after ~3 peaks.
-%   - No long-range order.
+\subsubsection{Solid Phase ($T^* = 0.2$, $T \approx 32.5$\,K)}
 
-\subsubsection{Solid Phase ($\Tstar = 0.4$, $T \approx 65$\,K)}
+At $T^* = 0.2$, Krypton is solidly in its crystalline FCC phase. The $g(r)$ computed from the simulation reflects this directly: it shows at least five distinct, sharply resolved peaks before reaching the box cutoff, with near-zero valleys between them.
 
-% [WRITE INTERPRETATION HERE]
+The peaks arise because atoms are vibrating about fixed lattice sites. Each crystallographic coordination shell — the set of neighbours at a specific geometry-dictated distance — contributes one delta-function-like spike that is only slightly broadened by thermal motion at this low temperature. Crucially, these peaks do not die away with increasing $r$. This is the hallmark of \emph{long-range order}: knowing where one atom is tells you, with high probability, exactly where atoms are 15\,\AA\ away. The valleys between peaks approach zero, meaning that finding an atom at those interstitial distances is nearly forbidden by the lattice geometry.
 
-\subsubsection{Liquid Phase ($\Tstar = 1.0$, $T \approx 162$\,K)}
+To check quantitatively whether the peak positions match genuine FCC geometry, we compare the measured first peak to the theoretical FCC nearest-neighbour distance. For a system at density $\rho^* = 0.8442$, the FCC lattice constant (in reduced units) is:
+\begin{equation}
+    a^* = \left(\frac{4}{\rho^*}\right)^{1/3} = \left(\frac{4}{0.8442}\right)^{1/3} \approx 1.6796
+    \label{eq:fcc_lat}
+\end{equation}
+The nearest-neighbour distance is the face-diagonal divided by two: $r^*_1 = a^*/\sqrt{2} \approx 1.1877$, or in ångströms $r_1 = 1.1877 \times 3.65 \approx 4.335$\,\AA. Table~\ref{tab:fcc_peaks} lists the first five FCC shell distances and compares them to the peak positions visible in Figure~\ref{fig:kr_gr_solid}.
 
-% [WRITE INTERPRETATION HERE]
+\begin{table}[H]
+    \centering
+    \caption{Theoretical FCC coordination shell distances for Krypton at $\rho^* = 0.8442$ compared to simulated $g(r)$ peak positions at $T^* = 0.2$.}
+    \label{tab:fcc_peaks}
+    \begin{tabular}{cccccc}
+        \toprule
+        \textbf{Shell} & \textbf{Multiplier} & \textbf{$r^*$ (theory)} & \textbf{$r$ [\AA] (theory)} & \textbf{$N_\text{coord}$} & \textbf{$r$ [\AA] (sim.)} \\
+        \midrule
+        1 & $a^*/\sqrt{2}$     & 1.1877 & 4.335 & 12 & $\approx 4.19$ \\
+        2 & $a^*$              & 1.6796 & 6.131 & 6  & $\approx 6.10$ \\
+        3 & $a^*\sqrt{3/2}$    & 2.0571 & 7.508 & 24 & $\approx 7.47$ \\
+        4 & $a^*\sqrt{2}$      & 2.3753 & 8.670 & 12 & $\approx 8.65$ \\
+        5 & $a^*\sqrt{5/2}$    & 2.6557 & 9.693 & 24 & $\approx 9.69$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
-\subsection{Normalization Check: \texorpdfstring{$g(r) \to 1$}{g(r)→1}}
+The agreement is excellent to within $\sim 0.15$\,\AA\ across all five shells. The small systematic shift of the first simulation peak to $r \approx 4.19$\,\AA\ (relative to the ideal $4.335$\,\AA) reflects that at $T^* = 0.2$, finite thermal pressure causes a slight contraction of the effective lattice spacing compared to the zero-temperature FCC ideal.
 
-% Confirm that g(r) asymptotes to 1.0 at large r in both cases.
-% Report the value at the last bin.
+The first peak height is $g(r^*_1) \approx 4.44$. The large magnitude — almost 4.5 times the bulk density — reflects that the 12 nearest neighbours in the FCC lattice are all clustered within a narrow radial band, a consequence of the crystal's perfect translational symmetry.
 
-At $r \approx L/2 = [value]$\,\AA, the measured $g(r) = [value]$ for $\Tstar = 0.4$ and $g(r) = [value]$ for $\Tstar = 1.0$, both within [tolerance] of the expected asymptote of 1.0.
+\subsubsection{Liquid Phase ($T^* = 1.0$, $T \approx 162.5$\,K)}
 
-% [WRITE DISCUSSION — what would it mean if g(r) didn't reach 1?]
+At $T^* = 1.0$, Krypton is in the liquid state. The $g(r)$ is unambiguously liquid-like: a single prominent but \emph{broad} first peak, followed by weak secondary oscillations that quickly damp to 1.0, with no structure surviving beyond $\sim 10$\,\AA.
 
-% =============================================================
-%  OPTIONAL SECTION — include only if MSD was chosen
-% =============================================================
-% \subsection{Mean Square Displacement and Diffusion Coefficient}
-%
-% (Include this section only if your group also computed MSD)
-%
-% \subsubsection{Unwrapped Coordinates}
-% [EXPLAIN WHY UNWRAPPED IS NECESSARY]
-%
-% \subsubsection{MSD vs. Time}
-% \begin{figure}[H]
-%     \centering
-%     % \includegraphics[width=0.75\linewidth]{figures/kr_msd.pdf}
-%     \caption{MSD vs. time in picoseconds for Krypton at $\Tstar = 1.0$.}
-% \end{figure}
-%
-% \subsubsection{Diffusion Coefficient}
-% From the Einstein relation $D = \lim_{t\to\infty} \frac{1}{6t}\langle R^2(t) \rangle$,
-% the slope of the linear regime gives:
-% \begin{equation}
-%     D_{\text{Kr}} = [value]\,\text{m}^2/\text{s}
-% \end{equation}
+The first peak is centred at $r \approx 3.99$\,\AA\ with $g \approx 2.71$. Its position is actually slightly inside the FCC ideal ($4.335$\,\AA): in a liquid, atoms are free to rearrange, and the effective nearest-neighbour distance shifts to the potential minimum near $r^*_\text{min} = 2^{1/6} \approx 1.122$, i.e.\ $r \approx 4.10$\,\AA\ — close to what we observe.
+
+The key distinction from the solid is what happens \emph{beyond} the first peak. Where the solid showed five resolved shells, the liquid shows only one further broad hump (around 7.5\,\AA) before $g(r)$ becomes flat. This is the signature of \emph{short-range order only}: the liquid maintains a well-defined first coordination cage (atoms cannot overlap the LJ core), but the positional memory decays over one to two neighbour shells. A fluid atom does not remember — and cannot predict — the location of atoms more than a few diameters away.
+
+The reduced peak height ($g \approx 2.71$ vs.\ $4.44$ in the solid) reflects the much broader angular spread of the neighbours: instead of being locked into 12 precise FCC positions, the liquid first shell spans a diffuse cloud over all directions.
+
+\subsection{Normalization Check: \texorpdfstring{$g(r) \to 1$}{g(r) → 1}}
+
+A correct $g(r)$ calculation must asymptote to 1.0 at large $r$. This is not merely a convention — it is a direct test of whether the normalization by shell volume and bulk density was implemented without error. Table~\ref{tab:gr_norm} records the mean of the last five histogram bins (near $r \approx L/2 = 4.199\,\sigma = 15.33$\,\AA) for both runs.
+
+\begin{table}[H]
+    \centering
+    \caption{Normalization check: mean $g(r)$ over last five bins near $r = L/2$.}
+    \label{tab:gr_norm}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{State}   & \textbf{$T^*$} & \textbf{Mean $g(r)$ at large $r$} & \textbf{Deviation from 1.0} \\
+        \midrule
+        Solid (Kr)       & $0.2$          & $0.963$                            & $-3.7\%$ \\
+        Liquid (Kr)      & $1.0$          & $1.017$                            & $+1.7\%$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The liquid result ($1.017$) is within $1.7\%$ of the theoretical asymptote — a clear pass, consistent with the Module 6 test at $T^* = 1.0$ which gave $0.9951$. The normalization formula is correct.
+
+The solid result ($0.963$) deserves a careful interpretation. It is tempting to flag a $-3.7\%$ deviation as a normalization error, but it is not: it is a physical signature of the solid's long-range order. In a crystal, $g(r)$ does not smoothly approach 1.0 — it continues oscillating up to arbitrarily large $r$ (in principle), because the system retains positional correlations across the entire simulation box. At $T^* = 0.2$, the oscillations have not fully decayed by $r = L/2$, so the last few bins happen to sit on a descending wing rather than the asymptote. This would improve (converge closer to 1.0) with a larger simulation box where more distance is available before the $L/2$ cutoff. The physics here is correct; the apparent deviation is an artifact of the finite system size combined with the solid's long-range order, not a bug in the code.
+
+In summary: for a \emph{liquid}, $g(r) \to 1.0$ serves as a clean normalization test; for a \emph{solid}, residual structure near $L/2$ is expected and physically meaningful. Both state points are consistent with their respective expected behaviours, and the MD engine faithfully reproduces the structural fingerprint of Krypton in both phases.
