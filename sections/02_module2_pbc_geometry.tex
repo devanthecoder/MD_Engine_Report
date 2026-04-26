@@ -7,7 +7,7 @@
 
 \subsection{What Are We Doing?}
 
-Before we can simulate anything, we need to answer a deceptively simple question: \textit{where do we put the atoms, and what happens when they reach the edge of the box?} This module solves two foundational problems. First, a real bulk material has no edges; every atom is surrounded by neighbours in every direction, but our simulation can only hold a few hundred atoms. Second, placing atoms at random positions leads to catastrophic overlaps that crash the code. Module 2 introduces the three tools that fix both problems: \textbf{Periodic Boundary Conditions (PBC)}, the \textbf{Minimum Image Convention (MIC)}, and the \textbf{Face-Centred Cubic (FCC) lattice}.
+Before we can simulate anything, we need to answer a deceptively simple question: where do we put the atoms, and what happens when they reach the edge of the box? This module solves two foundational problems. First, a real bulk material has no edges; every atom is surrounded by neighbors in every direction, but our simulation can only hold a few hundred atoms. Second, placing atoms at random positions leads to catastrophic overlaps; if atoms are initialized too close together, the repulsive forces scale toward infinity, causing immediate numerical instability that crashes the code. Module 2 introduces the three tools that fix both problems: Periodic Boundary Conditions (PBC), the Minimum Image Convention (MIC), and the Face-Centred Cubic (FCC) lattice.
 
 \subsection{Why Are We Doing It?}
 
