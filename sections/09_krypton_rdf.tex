@@ -59,7 +59,7 @@ Both runs used $N = 500$ atoms at $\rho^* = 0.8442$ (box length $L^* = 8.398$, i
     \label{fig:kr_gr}
 \end{figure}
 
-The two panels tell fundamentally different stories. The left panel (solid) is dominated by a sequence of sharp, well-separated spikes. The right panel (liquid) shows one prominent broad peak followed by rapidly diminishing oscillations that flatten to 1.0 within a few ångströms. These two shapes are the archetypal ``structural fingerprints'' of a crystal and a fluid, respectively.
+The two panels tell fundamentally different stories. The left panel (solid) is dominated by a sequence of sharp, well-separated spikes. The right panel (liquid) shows one prominent broad peak followed by rapidly diminishing oscillations that flatten to 1.0 within a few angstroms. These two shapes are the classic signatures that distinguish a crystal from a fluid.
 
 \subsection{State Identification and Physical Interpretation}
 
@@ -103,7 +103,7 @@ At $T^* = 1.0$, Krypton is in the liquid state. The $g(r)$ is unambiguously liqu
 
 The first peak is centred at $r \approx 3.99$\,\AA\ with $g \approx 2.71$. Its position is actually slightly inside the FCC ideal ($4.335$\,\AA): in a liquid, atoms are free to rearrange, and the effective nearest-neighbour distance shifts to the potential minimum near $r^*_\text{min} = 2^{1/6} \approx 1.122$, i.e.\ $r \approx 4.10$\,\AA\ — close to what we observe.
 
-The key distinction from the solid is what happens \emph{beyond} the first peak. Where the solid showed five resolved shells, the liquid shows only one further broad hump (around 7.5\,\AA) before $g(r)$ becomes flat. This is the signature of \emph{short-range order only}: the liquid maintains a well-defined first coordination cage (atoms cannot overlap the LJ core), but the positional memory decays over one to two neighbour shells. A fluid atom does not remember — and cannot predict — the location of atoms more than a few diameters away.
+Beyond the first peak, the solid showed five sharp rings while the liquid shows just one broad bump (around $7.5$\,\AA) before going flat. This means the liquid only has short-range order: atoms keep a well-defined nearest-neighbour cage since they cannot overlap, but beyond that, all positional regularity is lost within a shell or two. Unlike a crystal, a fluid atom has no way of knowing where atoms are more than a couple of diameters away.
 
 The reduced peak height ($g \approx 2.71$ vs.\ $4.44$ in the solid) reflects the much broader angular spread of the neighbours: instead of being locked into 12 precise FCC positions, the liquid first shell spans a diffuse cloud over all directions.
 
@@ -127,6 +127,6 @@ A correct $g(r)$ calculation must asymptote to 1.0 at large $r$. This is not mer
 
 The liquid result ($1.017$) is within $1.7\%$ of the theoretical asymptote — a clear pass, consistent with the Module 6 test at $T^* = 1.0$ which gave $0.9951$. The normalization formula is correct.
 
-The solid result ($0.963$) deserves a careful interpretation. It is tempting to flag a $-3.7\%$ deviation as a normalization error, but it is not: it is a physical signature of the solid's long-range order. In a crystal, $g(r)$ does not smoothly approach 1.0 — it continues oscillating up to arbitrarily large $r$ (in principle), because the system retains positional correlations across the entire simulation box. At $T^* = 0.2$, the oscillations have not fully decayed by $r = L/2$, so the last few bins happen to sit on a descending wing rather than the asymptote. This would improve (converge closer to 1.0) with a larger simulation box where more distance is available before the $L/2$ cutoff. The physics here is correct; the apparent deviation is an artifact of the finite system size combined with the solid's long-range order, not a bug in the code.
+The solid result ($0.963$) needs a careful reading. A $-3.7\%$ deviation might look like a normalisation error, but it is not --- it is a physical consequence of the crystal's long-range order. Unlike a liquid, $g(r)$ in a crystal does not smoothly settle to $1.0$; it keeps oscillating out to large $r$ because the atoms retain positional correlations across the whole box. At $T^* = 0.2$ these oscillations have not died out by $r = L/2$, so the last few bins land on a descending part of a peak rather than the flat asymptote. A larger simulation box would fix this by giving the oscillations more room to decay before the $L/2$ cutoff is reached. The physics is correct; the apparent offset is simply a finite-size artificial thing amplified by the solid's long-range order, not a bug.
 
 In summary: for a \emph{liquid}, $g(r) \to 1.0$ serves as a clean normalization test; for a \emph{solid}, residual structure near $L/2$ is expected and physically meaningful. Both state points are consistent with their respective expected behaviours, and the MD engine faithfully reproduces the structural fingerprint of Krypton in both phases.

@@ -1,5 +1,5 @@
 % =============================================================
-%  SECTION: Module 2 — Boundary Conditions and Geometry
+%  SECTION: Module 2: Boundary Conditions and Geometry
 % =============================================================
 
 \newpage
@@ -7,15 +7,15 @@
 
 \subsection{What Are We Doing?}
 
-Before we can simulate anything, we need to answer a deceptively simple question: where do we put the atoms, and what happens when they reach the edge of the box? This module solves two foundational problems. First, a real bulk material has no edges; every atom is surrounded by neighbors in every direction, but our simulation can only hold a few hundred atoms. Second, placing atoms at random positions leads to catastrophic overlaps; if atoms are initialized too close together, the repulsive forces scale toward infinity, causing immediate numerical instability that crashes the code. Module 2 introduces the three tools that fix both problems: Periodic Boundary Conditions (PBC), the Minimum Image Convention (MIC), and the Face-Centred Cubic (FCC) lattice.
+Before we can simulate anything, we need to answer a deceptively simple question: where do we put the atoms, and what happens when they reach the edge of the box? This module solves two foundational problems. First, a real bulk material has no edges; every atom is surrounded by neighbors in every direction, but our simulation can only hold a few hundred atoms. Second, placing atoms at random positions leads to catastrophic overlaps; if atoms are initialized too close together, the repulsive forces scale toward infinity, causing immediate numerical instability that crashes the code. Module 2 introduces the three tools that fix both problems: Periodic Boundary Conditions (PBC), the Minimum Image Convention (MIC), and the Face-Centred Cubic (FCC) cell lattice.
 
 \subsection{Why Are We Doing It?}
 
 \subsubsection{Why Not Just a Box with Walls?}
 
-In a real material with, say, $10^{23}$ atoms, those buried deep inside the bulk are surrounded by neighbours on every side. Only a tiny fraction sit at the surface. But in a simulation with $N = 256$ atoms in a plain box, nearly half the atoms are near a wall and have no neighbours on one side. This is not a small correction — it fundamentally changes the physics. Surface atoms behave differently: they experience net forces pointing inward and exhibit different thermal and structural properties. Any result we compute would be dominated by this artificial surface, not the bulk behaviour we care about.
+In a real material with, say, $10^{23}$ atoms, those buried deep inside the bulk are surrounded by neighbours on every side. Only a tiny fraction sit at the surface. But in a simulation with $N = 256$ atoms in a plain box, nearly half the atoms are near a wall and have no neighbours on one side. This is not a small correction: it fundamentally changes the physics. Surface atoms behave differently: they experience net forces pointing inward and exhibit different thermal and structural properties. Any result we compute would be dominated by this artificial surface, not the bulk behaviour we care about.
 
-The fix is Periodic Boundary Conditions. We declare that our simulation cell is \emph{not} a box with walls, but rather a \emph{tile} — one cell in an infinite checkerboard of identical cells. When an atom crosses the right edge, an identical copy simultaneously crosses the left edge of the adjacent tile and enters our cell. The atom effectively wraps around, just like a Pac-Man leaving one side of the screen and reappearing on the other.
+The fix is Periodic Boundary Conditions. We declare that our simulation cell is \emph{not} a box with walls, but rather a \emph{tile}: one cell in an infinite checkerboard of identical cells. When an atom crosses the right edge, an identical copy simultaneously crosses the left edge of the adjacent tile and enters our cell. The atom effectively wraps around, just like Pac-Man leaving one side of the screen and reappearing on the other.
 
 \begin{figure}[H]
     \centering
@@ -28,9 +28,9 @@ A key subtlety: PBC works correctly only if the simulation cell is large enough 
 
 \subsubsection{Why the FCC Lattice and Not Random Positions?}
 
-The Lennard-Jones potential (Eq.~\eqref{eq:lj}) has a $1/r^{12}$ repulsive core that grows \emph{extremely} steeply as two atoms approach each other. If we place atoms at random positions, there is a high probability that some pair will overlap — say $r^* \approx 0.5$, where the potential energy soars to $\phi^* \approx 4[(1/0.5)^{12} - (1/0.5)^6] \approx 16000$. In the NVE ensemble, total energy is conserved, so this enormous potential energy converts instantly into kinetic energy. The atoms fly apart at absurd speeds, and the simulation diverges.
+The reduced Lennard-Jones potential (Eq.~\eqref{eq:lj_reduced}) has a $1/(r^*)^{12}$ repulsive core that grows \emph{extremely} steeply as two atoms approach each other. If we place atoms at random positions, there is a high probability that some pair will overlap, say $r^* \approx 0.5$, where the potential energy soars to $\phi^* \approx 4[(1/0.5)^{12} - (1/0.5)^6] \approx 16000$. In the NVE ensemble\footnote{The NVE ensemble represents an isolated system where the Number of particles, Volume, and total Energy remain strictly constant throughout its lifetime.}, total energy is conserved, so this enormous potential energy converts instantly into kinetic energy. The atoms fly apart at absurd speeds, and the simulation diverges.
 
-Starting on an FCC lattice avoids this entirely. Inert gas solids like Krypton naturally crystallise into the FCC structure, so this initial condition is not just computationally safe — it is also physically motivated. Every atom begins with well-separated, regular neighbours, and the system can equilibrate smoothly toward thermodynamic equilibrium.
+Starting on an FCC lattice avoids this entirely. Inert gas solids like Krypton naturally crystallize into the FCC structure, so along with the initial condition being computationally safe, it is also physically motivated. Every atom begins with well-separated, regular neighbours, and the system can equilibrate smoothly toward thermodynamic equilibrium.
 
 \subsection{How Is It Implemented?}
 
@@ -41,18 +41,46 @@ After each integration step, any atom whose coordinate has drifted outside $[0, 
     \mathbf{r}_i \leftarrow \mathbf{r}_i \bmod L
     \label{eq:pbc_wrap}
 \end{equation}
-This is equivalent to the conditional logic ($x > L \Rightarrow x - L$; $x < 0 \Rightarrow x + L$) but handles arbitrarily large displacements in a single line — important for the stress test discussed in Section~\ref{sec:mic_test}.
+This is equivalent to the conditional logic ($x > L \Rightarrow x - L$; $x < 0 \Rightarrow x + L$) but handles arbitrarily large displacements in a single line, which is important for the stress test discussed in Section~\ref{sec:mic_test}.
 
 \subsubsection{Minimum Image Convention}
 \label{sec:mic}
 
-PBC creates an infinite universe of image atoms. Atom $i$ at position $x_i$ could interact with atom $j$ at $x_j$, or with its image at $x_j + L$, or at $x_j - L$, or at $x_j + 2L$, and so on forever. We need a rule to pick \emph{one}. The Minimum Image Convention says: always interact with the nearest image. The shortest distance component in one dimension is:
 \begin{equation}
     dx_{ij} = x_i - x_j - L \cdot \mathrm{round}\!\left(\frac{x_i - x_j}{L}\right)
     \label{eq:mic}
 \end{equation}
-The rounding step identifies which periodic image of atom $j$ is closest to atom $i$ and shifts the distance accordingly. By construction, $dx_{ij} \in (-L/2,\, L/2]$ — the result is always the shortest path between the two atoms, whether that path goes through a wall or not.
+The rounding step identifies which periodic image of atom $j$ is closest to atom $i$ and shifts the distance accordingly. By construction, $dx_{ij} \in (-L/2,\, L/2]$, meaning the result is always the shortest path between the two atoms, whether that path goes through a wall or not.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[scale=1.2]
+        % Draw adjacent image cells (dashed)
+        \draw[gray!50, dashed] (-6,-2) rectangle (-2,2);
+        \draw[gray!50, dashed] (2,-2) rectangle (6,2);
+        \node[gray, font=\scriptsize] at (4, -1.7) {Image Cell};
+        \node[gray, font=\scriptsize] at (-4, -1.7) {Image Cell};
 
+        % Draw primary central cell (solid)
+        \draw[thick, blue!80!black] (-2,-2) rectangle (2,2);
+        \node[blue!80!black, font=\scriptsize] at (0, -1.7) {Primary Cell};
+
+        % Box dimension L
+        \draw[<->, thick] (-2, -2.3) -- (2, -2.3) node[midway, below] {$L$};
+
+        % Atoms
+        \filldraw[blue] (1.2, 0.4) circle (0.1) node[above right] {$i$};
+        \filldraw[red] (-1.4, -0.3) circle (0.1) node[above left] {$j$};
+
+        % Image atom
+        \filldraw[red!40] (2.6, -0.3) circle (0.1) node[right, font=\small] {image $j'$};
+
+        % Vectors
+        \draw[->, red, thick, dashed] (1.2, 0.4) -- (-1.4, -0.3) node[midway, above, sloped, font=\scriptsize] {naive distance};
+        \draw[->, green!60!black, thick] (1.2, 0.4) -- (2.6, -0.3) node[midway, below, sloped, font=\scriptsize] {MIC distance};
+    \end{tikzpicture}
+    \caption{Visualising the Minimum Image Convention (MIC). Atom $i$ interacts with the nearest periodic image $j'$, taking the shortest path across the boundary rather than the longer naive distance to the primary atom $j$.}
+    \label{fig:mic_visual}
+\end{figure}
 \subsubsection{Cutoff Constraint}
 \label{sec:mic_constraint}
 
@@ -62,7 +90,40 @@ For the MIC to be consistent, the cutoff radius must satisfy:
     \label{eq:cutoff_constraint}
 \end{equation}
 If $r_c > L/2$, an atom could simultaneously "see" two images of the same neighbour, double-counting the interaction. In our simulation, $r_c^* = 2.5$ and $L^* \approx 6.71$ (for $n_\text{cells} = 4$, $\rho^* = 0.8442$), giving $L/2 \approx 3.35 > 2.5$. The constraint is satisfied.
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[scale=1.2]
+        % Draw adjacent image cells (dashed)
+        \draw[gray!50, dashed] (-6,-2) rectangle (-2,2);
+        \draw[gray!50, dashed] (2,-2) rectangle (6,2);
 
+        % Draw primary central cell (solid)
+        \draw[thick, blue!80!black] (-2,-2) rectangle (2,2);
+        \node[blue!80!black, font=\scriptsize] at (0, -1.7) {Primary Cell};
+
+        % Center atom i
+        \filldraw[blue] (0.6, 0) circle (0.1) node[above right] {$i$};
+
+        % Atom j and its image
+        \filldraw[red] (1.7, 0) circle (0.1) node[right] {$j$};
+        \filldraw[red!40] (-2.3, 0) circle (0.1) node[left] {image $j'$};
+
+        % L/2 boundaries
+        \draw[<->, gray!80, thick] (-2, -2.3) -- (0, -2.3) node[midway, below, font=\scriptsize] {$L/2$};
+        \draw[<->, gray!80, thick] (0, -2.3) -- (2, -2.3) node[midway, below, font=\scriptsize] {$L/2$};
+
+        % Safe cutoff (Green)
+        \draw[green!60!black, thick, dashed] (0.6, 0) circle (1.3);
+        \draw[->, green!60!black] (0.6,0) -- (0.6, 1.3) node[midway, left, font=\scriptsize] {$r_c$};
+        \node[green!60!black, font=\scriptsize] at (0.6, 1.5) {Safe: $r_c \leq L/2$ (sees $j$ only)};
+
+        % Unsafe cutoff (Red)
+        \draw[red, thick, dashed] (0.6, 0) circle (3.1);
+        \node[red, font=\scriptsize] at (0.6, 3.3) {Unsafe: $r_c > L/2$ (sees $j$ AND $j'$)};
+    \end{tikzpicture}
+    \caption{Visualising the Cutoff Constraint. If the interaction cutoff $r_c$ exceeds $L/2$, the interaction sphere around $i$ encompasses both atom $j$ and its periodic image $j'$, leading to an unphysical double-counting of the force.}
+    \label{fig:cutoff_constraint}
+\end{figure}
 \subsubsection{FCC Lattice Generation}
 
 The simulation box length is determined from the target reduced density:
@@ -82,13 +143,13 @@ The full lattice is built by translating this unit cell to all $n_\text{cells}^3
 
 \subsubsection{What Happens If You Skip the MIC? Ghost Interactions}
 
-Without the MIC, atom $i$ might compute its force with a distant image of atom $j$ instead of the nearest one. This has two consequences. Physically, the interaction becomes non-local — atoms interact with "ghosts" on the far side of the box rather than their true nearest neighbours. Computationally, if $r_c > L/2$, an atom can see two images of the same neighbour simultaneously, introducing a spurious force. Both effects cause the energy to drift and the simulation to lose physical meaning.
+Without the MIC, atom $i$ might compute its force with a distant image of atom $j$ instead of the nearest one. This has two consequences. Physically, the interaction becomes non-local: atoms interact with "ghosts" on the far side of the box rather than their true nearest neighbours. Computationally, if $r_c > L/2$, an atom can see two images of the same neighbour simultaneously, introducing an artificial force. Both effects cause the energy to drift and the simulation to lose physical meaning.
 
 \subsection{Test Results}
 
 \subsubsection{FCC Lattice: Visualisation}
 
-Figure~\ref{fig:fcc_lattice} shows the FCC lattice generated by \texttt{generate\_fcc\_lattice} with $n_\text{cells} = 3$ and $\rho^* = 4.0$ (a denser packing chosen for visual clarity). The resulting $N = 108$ atoms and box length $L = 3.0$ produce a clear FCC pattern. The characteristic feature of FCC — atoms at face centres offset by $a/2$ from corner atoms — is visible in the regular diagonal arrangements across each face of the cube.
+Figure~\ref{fig:fcc_lattice} shows the FCC lattice generated by \texttt{generate\_fcc\_lattice} with $n_\text{cells} = 3$ and $\rho^* = 4.0$ (a denser packing chosen for visual clarity). The resulting $N = 108$ atoms and box length $L = 3.0$ produce a clear FCC pattern. The characteristic feature of FCC (atoms at face centres offset by $a/2$ from corner atoms) is visible in the regular diagonal arrangements across each face of the cube.
 
 \begin{figure}[H]
     \centering
@@ -124,7 +185,7 @@ Figure~\ref{fig:mic} shows both tests of \texttt{apply\_minimum\_image}.
 \end{equation*}
 The MIC correctly identifies the short path through the periodic boundary.
 
-\textbf{(b) Stress test.} We placed atom $i$ at $[0.5,\, 7.0,\, 10.0]$ and atom $j$ at $[1.6,\, 118.0,\, 105.0]$ in a box of $L = 2$. Atom $j$ is 55 box-lengths away in $y$ and 47 in $z$ — the kind of displacement that can accumulate over a long simulation if positions are not regularly wrapped. The function returns $\mathbf{dr} = [-0.9,\, -1.0,\, -1.0]$ with $|\mathbf{dr}| = 1.676$. The verification $|\mathbf{dr}| < \sqrt{3}\,L/2 = 1.732$ (the body diagonal of the half-box, the maximum possible MIC distance in a cubic cell) passes, confirming the function handles extreme cases correctly in a single vectorized operation.
+\textbf{(b) Stress test.} We placed atom $i$ at $[0.5,\, 7.0,\, 10.0]$ and atom $j$ at $[1.6,\, 118.0,\, 105.0]$ in a box of $L = 2$. Atom $j$ is 55 box-lengths away in $y$ and 47 in $z$, which is the kind of displacement that can accumulate over a long simulation if positions are not regularly wrapped. The function returns $\mathbf{dr} = [-0.9,\, -1.0,\, -1.0]$ with $|\mathbf{dr}| = 1.676$. The verification $|\mathbf{dr}| < \sqrt{3}\,L/2 = 1.732$ (the body diagonal of the half-box, the maximum possible MIC distance in a cubic cell) passes, confirming the function handles extreme cases correctly in a single vectorized operation.
 
 \begin{figure}[H]
     \centering

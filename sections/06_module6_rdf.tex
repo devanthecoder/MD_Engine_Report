@@ -1,5 +1,5 @@
 % =============================================================
-%  SECTION: Module 6 — Radial Distribution Function
+%  SECTION: Module 6, Radial Distribution Function
 % =============================================================
 
 \newpage
@@ -13,27 +13,26 @@ After building and validating the MD engine, we now need to extract meaningful p
 
 \subsubsection{Why Is Temperature Not Enough?}
 
-It might seem natural to identify the phase of a system from its temperature alone — after all, we speak of the ``melting point'' as a specific temperature. But in a simulation at fixed density, the same temperature can correspond to different phases depending on the pressure, and the kinetic energy (temperature) carries no information about \emph{geometry}. Two configurations with completely different atomic arrangements — one crystalline, one disordered — can have the same temperature and even the same total energy.
+It might seem natural to identify the phase of a system from its temperature alone; after all, we speak of the ``melting point'' as a specific temperature. But in a simulation at fixed density, the same temperature can correspond to different phases depending on the pressure, and the kinetic energy (from temperature) carries no information about the \emph{geometry} of the system. Two configurations with completely different atomic arrangements, one crystalline, one disordered, can have the same temperature and even the same total energy.
 
-What distinguishes a solid from a liquid is not energy but \emph{spatial order}: whether atoms sit in predictable positions relative to one another. $g(r)$ captures exactly this. It is defined as the probability of finding an atom at distance $r$ from a reference atom, relative to what a completely random (ideal gas) arrangement would predict:
-\begin{equation}
-    g(r) = \frac{V}{4\pi r^2 N^2}
-    \left\langle \sum_i \sum_{j \neq i} \delta(r - r_{ij}) \right\rangle
-    \label{eq:gr_def}
-\end{equation}
-Because $g(r)$ is normalized against the average bulk density $\rho = N/V$, a perfectly uniform system gives $g(r) = 1$ everywhere. Peaks above 1 mark distances where atoms preferentially cluster; valleys below 1 mark excluded regions.
+What truly distinguishes a solid from a liquid is its \emph{spatial order}: whether atoms are locked into a predictable grid or scattered chaotically. The Radial Distribution Function, or $g(r)$, is our mathematical tool for measuring this hidden structure. Imagine standing on a single reference atom and looking outward in concentric spheres. $g(r)$ simply asks: at a given distance $r$, how crowded is the neighbourhood compared to what you would expect if the atoms were just thrown in completely at random?
+
+Formally, it is calculated by tallying up the distances between all pairs of atoms and averaging them over time:
+$$g(r) = \frac{V}{4\pi r^2 N^2} \left\langle \sum_i \sum_{j \neq i} \delta(r - r_{ij}) \right\rangle$$
+
+The beauty of $g(r)$ lies in how easy it is to read. Because it is normalised against the average density of the whole box, a perfectly random, structureless system (like an ideal gas) acts as our baseline, giving a flat line at $g(r) = 1$ everywhere. Real atoms, however, interact with each other and form peaks and valleys. A peak rising above $1$ means atoms strongly prefer to sit at that specific distance, forming distinct "shells" of neighbours. A valley dropping below $1$ indicates a "dead zone" where atoms rarely sit, usually because repulsive forces are keeping them apart.
 
 \subsubsection{Solid vs.\ Liquid: The Structural Fingerprint}
 
 The shape of $g(r)$ tells the full story of the phase:
 
-\textbf{Solid:} Atoms are locked near their FCC lattice sites. Each shell of neighbours sits at a precise, geometry-dictated distance — the first shell at $r^* = \,\sigma$, the second at $\sqrt{2}\,\sigma$, the third at $\sqrt{3}\,\sigma$, and so on. $g(r)$ shows sharp, narrow peaks at these distances and is nearly zero in between. Crucially, this structure persists to large $r$ — the solid has \emph{long-range order}.
+\textbf{Solid:} Atoms are locked near their FCC lattice sites. Each shell of neighbours sits at a precise, geometry-dictated distance, the first shell at $r^* = \,1.09\sigma$, the second at $\sqrt{2}\times1.09\,\sigma$, the third at $\sqrt{3}\times\,1.09\sigma$, and so on. $g(r)$ shows sharp, narrow peaks at these distances and is nearly zero in between. Crucially, this structure persists to large $r$; the solid has \emph{long-range order}.
 
 \textbf{Liquid:} Atoms are mobile and constantly rearranging. There is still a well-defined first neighbourhood shell (atoms cannot overlap), producing a broad first peak. But beyond that, the positional correlation decays rapidly. After two or three broad peaks, $g(r)$ settles to 1.0, reflecting that at large distances the liquid looks like a random arrangement. This is the signature of \emph{short-range order only}.
 
 \subsubsection{Why Normalise by Shell Volume and Density?}
 
-Consider building a histogram of how many atoms are found at each distance. Even in a completely featureless ideal gas, this histogram would grow as $r^2$ — simply because there is more \emph{volume} at larger radii. A spherical shell at radius $r$ with thickness $\Delta r$ has volume $4\pi r^2 \Delta r$, so raw counts naturally increase quadratically with $r$. Dividing by the shell volume removes this geometric bias and gives the \emph{local number density} at each radius. Dividing once more by the global bulk density $\rho = N/V$ converts this into a dimensionless ratio. The result is $g(r)$: a function that measures how much denser or sparser the local environment is compared to the system average. By construction, $g(r) \to 1$ at large $r$, where correlations vanish and the local density matches the bulk.
+Consider building a histogram of how many atoms are found at each distance. Even in a completely featureless ideal gas, this histogram would grow as $r^2$, simply because there is more \emph{volume} at larger radii. A spherical shell at radius $r$ with thickness $\Delta r$ has volume $4\pi r^2 \Delta r$, so raw counts naturally increase quadratically with $r$. Dividing by the shell volume removes this geometric bias and gives the \emph{local number density} at each radius. Dividing once more by the global bulk density $\rho = N/V$ converts this into a dimensionless ratio. The result is $g(r)$: a function that measures how much denser or sparser the local environment is compared to the system average. By construction, $g(r) \to 1$ at large $r$, where correlations vanish and the local density matches the bulk.
 
 \subsection{How Is It Implemented?}
 
@@ -43,8 +42,8 @@ Figure~\ref{fig:m6_shells} illustrates the core idea. For a given configuration 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.62\linewidth]{figures/m6_shells_schematic.pdf}
-    \caption{Spherical shell histogram bins for the $g(r)$ calculation. Each coloured annular ring represents one histogram bin of width $\Delta r$ centred at radius $r_k$. The raw count of neighbouring atoms (blue) in each shell must be divided by the shell volume $4\pi r_k^2 \Delta r$ to remove the geometric $r^2$ bias before normalization by the bulk density.}
+    \includegraphics[width=0.62\linewidth]{figures/m6_shells_schematic.png}
+    \caption{shell histogram bins for the $g(r)$ calculation. Each coloured annular ring represents one histogram bin of width $\Delta r$ centred at radius $r_k$. The raw count of neighbouring atoms (blue) in each shell must be divided by the shell volume $4\pi r_k^2 \Delta r$ to remove the geometric $r^2$ bias before normalisation by the bulk density.}
     \label{fig:m6_shells}
 \end{figure}
 
@@ -55,33 +54,72 @@ After accumulating the histogram $h_k$ (count of pairs at distance $r_k$), the n
     g(r_k) = \frac{2 \cdot h_k \cdot V}{N^2 \cdot 4\pi r_k^2 \Delta r}
     \label{eq:gr_norm}
 \end{equation}
-The factor of 2 arises because the code counts each pair $(i, j)$ once (the upper triangle of the distance matrix), while the standard formula's double sum $\sum_{i \neq j}$ counts each pair twice — once as $(i,j)$ and once as $(j,i)$. Multiplying by 2 compensates for this, giving the correct normalization.
+The factor of 2 arises because the code counts each pair $(i, j)$ once (the upper triangle of the distance matrix), while the standard formula's double sum $\sum_{i \neq j}$ counts each pair twice, once as $(i,j)$ and once as $(j,i)$. Multiplying by 2 compensates for this, giving the correct normalisation.
 
 \subsubsection{Role of the Minimum Image Convention}
 
-The MIC serves two roles here. First, it ensures every computed distance $r_{ij}$ is the \emph{shortest} possible path between atoms $i$ and $j$ across the periodic tiling, so the structural peaks reflect the true geometry of the material rather than artefacts of the box boundaries. Second, because all MIC distances are bounded by $L/2$, setting $r_{\max} = L/2$ guarantees that no pair is double-counted through opposite periodic images.
+The Minimum Image Convention (MIC) is essential here for two practical reasons. First, because our simulation box wraps around itself, two atoms on opposite edges of the box are actually right next to each other. The MIC ensures we always calculate the shortest possible distance between any pair, even if that path goes "through" a boundary. This guarantees that our peaks represent the true physical structure of the material, rather than being distorted by the artificial walls of our box. 
 
+Second, it provides a strict cutoff for our measurements. By capping our search distance at exactly half the box length ($L/2$), we ensure that we never look far enough to accidentally count the same atom twice by seeing its "clone" wrapping around the opposite direction.
 \subsubsection{Statistical Averaging Over Frames}
 
-A single snapshot is too noisy to be useful — the histogram bins contain only a handful of counts, and the resulting $g(r)$ would be jagged and unreliable. Moreover, consecutive MD timesteps are highly correlated: the configuration at step $t$ is nearly identical to step $t+1$. The solution is to collect $g(r)$ from multiple snapshots during the production run (every 10 steps in our implementation) and average the results:
+A single snapshot is too noisy to be useful, the histogram bins contain only a handful of counts, and the resulting $g(r)$ would be jagged and unreliable. Moreover, consecutive MD timesteps are highly correlated: the configuration at step $t$ is nearly identical to step $t+1$. The solution is to collect $g(r)$ from multiple snapshots during the production run (every 10 steps in our implementation) and average the results:
 \begin{equation}
     \langle g(r_k) \rangle = \frac{1}{N_\text{frames}} \sum_{\text{frames}} g(r_k)
     \label{eq:gr_avg}
 \end{equation}
-Averaging over 60 frames (from 600 production steps sampled every 10) reduces statistical noise substantially while keeping the frames sufficiently spaced to limit correlation.
+Averaging over say 60 frames (from 600 production steps sampled every 10) reduces statistical noise substantially while keeping the frames sufficiently spaced to limit correlation.
 
 \subsubsection{Vectorized Implementation}
 
-The function \texttt{calculate\_rdf} uses fully vectorized NumPy operations. All pairwise displacement vectors are computed simultaneously via broadcasting and the MIC, the upper-triangle indices extract unique pairs without loops, and \texttt{np.bincount} fills the histogram in a single pass. This avoids $O(N^2)$ Python-level iteration entirely.
+The function \texttt{calculate\_rdf} uses fully vectorised NumPy operations to avoid $O(N^2)$ Python-level iteration entirely, drastically improving execution speed. All pairwise displacement vectors are computed simultaneously via broadcasting and passed through the Minimum Image Convention (MIC). The upper-triangle indices extract unique pairs without loops, and \texttt{np.bincount} fills the histogram in a single pass. Finally, the raw counts are normalised using the analytical volume of the concentric spherical shells. The core logic is implemented as follows:
+\begin{lstlisting}[language=Python, caption={Radial distribution function calculation using vectorized histogramming}, label={lst:rdf_calc}]
+def calculate_rdf(pos, box_length, dr, r_max):
+    """
+    Calculates the Radial Distribution Function g(r).
+    TASK :
+    1. Loop through all pairs and calculate distance r using MIC.
+    2. Sort distances into a histogram with bin width dr.
+    3. Normalize by the volume of the spherical shells and density.
+    """
+    N = len(pos)
+
+    n_bins = int(np.round(r_max / dr))
+    g_hist = np.zeros(n_bins)
+
+    # 1. Broadcast and apply the Minimum Image Convention
+    dr_vec = apply_minimum_image(pos[:, np.newaxis, :],
+                                 pos[np.newaxis, :, :],
+                                 box_length)
+    r_sq = np.sum(dr_vec**2, axis=2)
+
+    # 2. Extract unique pairs using upper triangle indices
+    r_dist = np.sqrt(r_sq[np.triu_indices(N, k=1)])
+    valid_dist = r_dist[r_dist < r_max]
+
+    # 3. Bin the distances in a single pass
+    k = (valid_dist / dr).astype(int)
+    cnt = np.bincount(k, minlength=n_bins)
+    g_hist += cnt
+
+    # 4. Normalise by shell volume and bulk density
+    r_centers = (np.arange(n_bins) + 0.5) * dr
+    shell_vol = 4 * np.pi * (r_centers**2) * dr
+
+    g_r = (2.0 * g_hist * (box_length**3)) / (N * N * shell_vol)
+
+    return r_centers, g_r
+\end{lstlisting}
 
 \subsection{Test Results}
+
 
 A test simulation was run at $T^* = 1.0$ (liquid-like state), $\rho^* = 0.8442$, $N = 256$ atoms, with 800 equilibration steps and $g(r)$ averaged over 60 production frames.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.82\linewidth]{figures/m6_gr_test.pdf}
-    \caption{Test $g(r^*)$ for a liquid-like state ($T^* = 1.0$, $N = 256$). The function shows a prominent first peak near $r^* \approx 1.0$ (the nearest-neighbour shell), followed by rapidly decaying oscillations — the characteristic signature of a liquid with short-range order only. The shaded green region highlights the large-$r$ regime where $g(r^*) \approx 1$. The mean over the last five bins is $0.9951$, confirming correct normalization within 0.5\% of the expected asymptote.}
+    \caption{Test $g(r^*)$ for a liquid-like state ($T^* = 1.0$, $N = 256$). The function shows a prominent first peak near $r^* \approx 1.0$ (the nearest-neighbour shell), followed by rapidly decaying oscillations; the characteristic signature of a liquid with short-range order only. The shaded green region highlights the large-$r$ regime where $g(r^*) \approx 1$. The mean over the last five bins is $0.9890$, confirming correct normalisation within 1.1\% of the expected asymptote.}
     \label{fig:m6_gr_test}
 \end{figure}
 
@@ -93,12 +131,11 @@ A test simulation was run at $T^* = 1.0$ (liquid-like state), $\rho^* = 0.8442$,
         \toprule
         \textbf{Check} & \textbf{Physical meaning} & \textbf{Expected} & \textbf{Obtained} \\
         \midrule
-        $g(r^*) \to 1$ at large $r^*$ & Normalization correct; no systematic bias  & $\approx 1.0$ & $0.9951$ \\
+        $g(r^*) \to 1$ at large $r^*$ & Normalization correct; no systematic bias  & $\approx 1.0$ & $0.9890$ \\
         First peak position             & Nearest-neighbour shell distance           & $\sim 1.0$    & $\approx 1.05$ \\
         $g(0) \approx 0$                & Hard-core exclusion; no overlapping atoms  & $\approx 0$   & $\approx 0$ \\
-        Frames averaged                 & Statistical convergence                    & $> 10$        & $60$ \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-All checks pass. The $g(r^*)$ asymptotes to $0.9951$, within $0.5\%$ of the theoretical value of 1.0 — well within acceptable statistical noise for 60 averaged frames. The hard-core exclusion region ($g \approx 0$ at small $r^*$) confirms that no atom overlaps are present. The broad, decaying peaks with a rapid approach to 1.0 are consistent with a liquid-like disordered state at $T^* = 1.0$.
+As detailed in Table~\ref{tab:m6_test}, all validation checks pass. The hard-core exclusion at short distances, the characteristic liquid-like peak decay, and the correct large-$r^*$ asymptote confirm that the algorithm is physically accurate and properly normalised.
