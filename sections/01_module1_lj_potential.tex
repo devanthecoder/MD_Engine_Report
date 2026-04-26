@@ -1,0 +1,82 @@
+% =============================================================
+%  SECTION: Module 1 — The Physics of Interaction
+%  ASSIGNED TO: [Person Name]
+%
+%  GUIDING QUESTIONS TO ANSWER:
+%   WHAT  — What is the Lennard-Jones potential? What does it compute?
+%   WHY   — Why model atoms with LJ? Why use reduced units?
+%           Why shift the potential at the cutoff?
+%   HOW   — How is the shifted LJ implemented? How is force/r returned?
+%  EXTRAS — Any physical intuition about the 12-6 form?
+%           What test did you run to verify correctness?
+% =============================================================
+
+\newpage
+\section{Module 1: The Physics of Interaction}
+
+\subsection{What Are We Doing?}
+% Explain: We need a mathematical model for how two atoms "feel" each other.
+% Introduce the LJ potential — what the 1/r^12 and 1/r^6 terms represent physically.
+% Mention reduced units.
+
+% [WRITE HERE]
+
+\subsection{Why Are We Doing It?}
+% Explain: Newton's 2nd law requires forces, forces come from the gradient of potential energy.
+% Why LJ for inert gases? (closed-shell, no bonding, only dispersion + repulsion)
+% Why reduced units? (numerical stability, generality across species)
+% Why shift the potential? (avoid discontinuity at cutoff causing energy drift)
+
+% [WRITE HERE]
+
+\subsection{How Is It Implemented?}
+% Explain the shifted LJ formula:
+%   phi*(r*) = 4[(1/r*)^12 - (1/r*)^6] - phi*(r_c*)
+% Explain returning force/r (not force magnitude) and why that's convenient
+%   for calculating the force vector: F_vec = (force/r) * dr_vec
+
+\subsubsection{The Lennard-Jones Potential}
+
+The total potential energy of the system is approximated as a sum over all unique pairs:
+\begin{equation}
+    U^* = \sum_{i<j} \phi^*\!\left(r^*_{ij}\right)
+\end{equation}
+where the reduced LJ potential is:
+\begin{equation}
+    \phi^*(\rstar) = 4\left[\left(\frac{1}{\rstar}\right)^{12} - \left(\frac{1}{\rstar}\right)^{6}\right]
+    \label{eq:lj}
+\end{equation}
+
+\subsubsection{Shifted Potential}
+
+To avoid a discontinuity in energy when a pair crosses the cutoff $r_c^*$, we subtract the value at the cutoff:
+\begin{equation}
+    \phi^*_{\text{shifted}}(\rstar) = \phi^*(\rstar) - \phi^*(r_c^*)
+    \label{eq:lj_shifted}
+\end{equation}
+
+\subsubsection{Force Calculation}
+
+% Explain the analytic gradient of LJ in reduced units.
+% F* = 48/r*^14 - 24/r*^8, returned as F/r for vectorized use.
+
+% [ADD EQUATION AND EXPLANATION HERE]
+
+\subsection{Test Results}
+
+% What test did you run?
+% Suggestion: plot phi*(r*) and F*(r*) vs r*, verify:
+%   - minimum at r* = 2^(1/6) ≈ 1.122
+%   - phi*(r_c*) = 0 (shift applied correctly)
+%   - phi*(r*) = 0 at r* = 1.0
+
+% Include plot(s) here:
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.75\linewidth]{figures/m1_lj_curve.pdf}
+    \caption{Shifted Lennard-Jones potential $\phi^*(\rstar)$ and force $F^*(\rstar)$ as a function of reduced distance. The potential goes to zero at $\rstar = r_c^* = 2.5$.}
+    \label{fig:lj_curve}
+\end{figure}
+
+% Numerical check: phi*(r*=1) = 0, min at r*=2^(1/6), force=0 at minimum.
+% [WRITE TEST DESCRIPTION AND RESULTS HERE]

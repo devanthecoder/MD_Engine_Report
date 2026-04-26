@@ -1,0 +1,185 @@
+% =============================================================
+%  MAIN FILE — MD Engine Project Report
+%  Course: Electronic Structure & Atomistic Modeling of Materials
+%
+%  COLLABORATION INSTRUCTIONS:
+%  Each section lives in its own file inside /sections/.
+%  Assign one file per person. Edit only your own file.
+%  Only touch main.tex to add/reorder \input{} lines.
+% =============================================================
+
+\documentclass[12pt, a4paper]{article}
+
+% ---------- Packages ----------
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=3cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ---------- Hyperref setup ----------
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=green!50!black,
+    urlcolor=blue,
+}
+
+% ---------- Code listing style ----------
+\lstdefinestyle{python}{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray}\itshape,
+    stringstyle=\color{orange!80!black},
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{gray!8},
+    frame=single,
+    rulecolor=\color{gray!40},
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+}
+\lstset{style=python}
+
+% ---------- Section title formatting ----------
+\titleformat{\section}{\large\bfseries\sffamily}{}{0em}{\thesection\quad}
+\titleformat{\subsection}{\normalsize\bfseries\sffamily}{}{0em}{\thesubsection\quad}
+\titleformat{\subsubsection}{\normalsize\itshape\sffamily}{}{0em}{\thesubsubsection\quad}
+
+% ---------- Header / Footer ----------
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small MD Simulation — Krypton}
+\lhead{\small ESAM Project Report}
+\rfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---------- Custom commands ----------
+\newcommand{\rstar}{r^{*}}
+\newcommand{\tstar}{t^{*}}
+\newcommand{\Tstar}{T^{*}}
+\newcommand{\Estar}{E^{*}}
+\newcommand{\rhostar}{\rho^{*}}
+\newcommand{\gr}{g(r)}
+\newcommand{\eps}{\varepsilon}
+
+% =============================================================
+\begin{document}
+
+% ---------- Title Page ----------
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+
+    {\Large\sffamily\bfseries Electronic Structure \& Atomistic Modeling of Materials}\\[0.5em]
+    {\large\sffamily Course Project}
+
+    \vspace{1.5cm}
+    \rule{\linewidth}{1.5pt}\\[0.4em]
+    {\Huge\bfseries\sffamily Build Your Own\\[0.3em] MD Simulation}\\[0.4em]
+    \rule{\linewidth}{1.5pt}
+
+    \vspace{1.5cm}
+    {\large\itshape Molecular Dynamics Engine for Krypton}\\[0.3em]
+    {\normalsize Property Studied: Radial Distribution Function $g(r)$}
+
+    \vspace{2cm}
+    \begin{tabular}{rl}
+        \textbf{Group Members:} & [Name 1] \\
+                                & [Name 2] \\
+                                & [Name 3] \\
+                                & [Name 4] \\[1em]
+        \textbf{Roll Numbers:}  & [Roll Numbers] \\[1em]
+        \textbf{Submitted to:}  & [Instructor Name] \\[1em]
+        \textbf{Date:}          & \today \\
+    \end{tabular}
+
+    \vfill
+    {\small Department of [Your Department]\\[0.2em]
+    Indian Institute of Technology Hyderabad}
+\end{titlepage}
+
+% ---------- Abstract ----------
+\input{sections/00_abstract}
+
+% ---------- Table of Contents ----------
+\newpage
+\tableofcontents
+\newpage
+
+% =============================================================
+%  PART I: MODULE-WISE IMPLEMENTATION AND TESTING
+% =============================================================
+\part*{Module-wise Implementation and Testing}
+\addcontentsline{toc}{part}{Module-wise Implementation and Testing}
+
+\input{sections/01_module1_lj_potential}
+\input{sections/02_module2_pbc_geometry}
+\input{sections/03_module3_integrator}
+\input{sections/04_module4_optimization}
+\input{sections/05_module5_assembly}
+\input{sections/06_module6_rdf}
+
+% =============================================================
+%  PART II: INTEGRATED ENGINE AND DIAGNOSTICS
+% =============================================================
+\part*{Integrated Engine \& Diagnostic Analysis}
+\addcontentsline{toc}{part}{Integrated Engine \& Diagnostic Analysis}
+
+\input{sections/07_integrated_engine}
+\input{sections/08_diagnostics}
+
+% =============================================================
+%  PART III: PHYSICAL PROPERTY ANALYSIS — KRYPTON
+% =============================================================
+\part*{Physical Property Analysis: Krypton}
+\addcontentsline{toc}{part}{Physical Property Analysis: Krypton}
+
+\input{sections/09_krypton_rdf}
+
+% =============================================================
+%  PART IV: FINAL CHALLENGE — MELTING
+% =============================================================
+\part*{Final Project Challenge: Melting}
+\addcontentsline{toc}{part}{Final Project Challenge: Melting}
+
+\input{sections/10_melting}
+
+% =============================================================
+%  CONCLUSION
+% =============================================================
+\input{sections/11_conclusion}
+
+% =============================================================
+%  REFERENCES
+% =============================================================
+\newpage
+\input{sections/12_references}
+
+% =============================================================
+%  APPENDIX — AI Acknowledgement
+% =============================================================
+\appendix
+\input{sections/A_ai_acknowledgement}
+
+\end{document}

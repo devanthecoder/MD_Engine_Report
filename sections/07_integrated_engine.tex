@@ -1,0 +1,65 @@
+% =============================================================
+%  SECTION: Integrated MD Engine — Main Loop
+%  ASSIGNED TO: [Person Name]
+%
+%  CONTENT:
+%   - Brief description of how all 6 modules come together.
+%   - The assembled main loop (or reference to Jupyter notebook).
+%   - Simulation parameters used (n_cells, rho*, T*, dt, steps, r_c, r_s).
+% =============================================================
+
+\newpage
+\section{Integrated MD Engine}
+
+\subsection{Overview}
+
+The six modules developed independently are assembled into a single, functional MD engine. The data flow is:
+
+\begin{enumerate}
+    \item \textbf{Module 2} generates the FCC lattice and box length $L^*$.
+    \item \textbf{Module 5} initialises velocities from the Maxwell-Boltzmann distribution and zeros net momentum.
+    \item \textbf{Module 4} builds the initial Verlet neighbor list.
+    \item The main loop iterates:
+    \begin{itemize}
+        \item \textbf{Module 3} (Velocity Verlet) advances positions and velocities.
+        \item \textbf{Module 4} rebuilds the neighbor list when the displacement threshold is exceeded.
+        \item \textbf{Module 5} applies velocity rescaling during equilibration.
+        \item \textbf{Module 1} provides the force and energy for every interacting pair.
+    \end{itemize}
+    \item In the production phase, \textbf{Module 6} collects $g(r)$ snapshots every 10 steps.
+\end{enumerate}
+
+\subsection{Simulation Parameters}
+
+\begin{table}[H]
+    \centering
+    \caption{MD engine simulation parameters.}
+    \label{tab:params}
+    \begin{tabular}{llc}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
+        \midrule
+        Unit cells per side  & $n_{\text{cells}}$ & 4 (test) / 5 (Kr runs) \\
+        Reduced density      & $\rhostar$          & 0.8442 \\
+        Target temperature   & $\Tstar$            & 1.0 (test); see Table~\ref{tab:kr_params} \\
+        Time step            & $\delta t^*$        & 0.005 \\
+        Cutoff radius        & $r_c^*$             & 2.5 \\
+        Skin radius          & $r_s^*$             & 3.2 \\
+        Equilibration steps  & ---                 & 1000 / 2000 \\
+        Production steps     & ---                 & 1000 / 2000 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Main Loop Code}
+
+The complete assembled code is provided in the accompanying Jupyter Notebook. The key structure is shown below:
+
+% If you want to include the code inline, uncomment and fill:
+% \begin{lstlisting}[caption={Integrated MD main loop.}, label={lst:main_loop}]
+% [PASTE MAIN LOOP CODE HERE]
+% \end{lstlisting}
+
+% Or just reference the notebook:
+The full code, including all six modules and the integrated main loop, is available in the
+accompanying Jupyter Notebook (\texttt{module6.ipynb}).

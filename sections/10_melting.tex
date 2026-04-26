@@ -1,0 +1,98 @@
+% =============================================================
+%  SECTION: Final Project Challenge — Melting
+%  ASSIGNED TO: [Person Name]
+%
+%  REQUIRED CONTENT:
+%   - Temperature stepping: T* = 0.2, 0.4, 0.6, 0.8, 1.0
+%   - All g(r) curves on ONE graph
+%   - Physical narrative of the solid → liquid transition
+%   - Identify the approximate melting point from the g(r) evolution
+%
+%  GUIDING QUESTIONS:
+%   HOW does the g(r) change as T* increases?
+%   At what T* do the sharp peaks begin to broaden or disappear?
+%   Is the transition sharp (first-order) or gradual?
+%   HOW does krypton's simulated melting point compare to the real value?
+% =============================================================
+
+\newpage
+\section{Final Project Challenge: Melting of Krypton}
+
+\subsection{Setup and Protocol}
+
+To observe the solid-to-liquid phase transition, we ran five independent simulations at increasing reduced temperatures $\Tstar \in \{0.2,\, 0.4,\, 0.6,\, 0.8,\, 1.0\}$, corresponding to real temperatures of approximately:
+
+\begin{table}[H]
+    \centering
+    \caption{Temperature stepping for the melting simulation. Real temperature $T = \Tstar \times 162.46$\,K.}
+    \label{tab:melt_temps}
+    \begin{tabular}{ccc}
+        \toprule
+        $\Tstar$ & $T$\,(K) & Expected state \\
+        \midrule
+        0.2 & 32.5  & Deep solid \\
+        0.4 & 65.0  & Solid \\
+        0.6 & 97.5  & Near melting \\
+        0.8 & 130.0 & Near melting / partial liquid \\
+        1.0 & 162.5 & Liquid \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+At each temperature, the system was equilibrated for [X] steps with velocity rescaling, then $g(r)$ was collected over [Y] production steps (sampled every 10 steps) and averaged.
+
+\subsection{Comparative \texorpdfstring{$g(r)$}{g(r)} Across Temperatures}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.9\linewidth]{figures/melting_gr_all.pdf}
+    \caption{Radial distribution function $g(r)$ of Krypton at five temperatures, from $\Tstar = 0.2$ (solid, bottom) to $\Tstar = 1.0$ (liquid, top). The horizontal axis is in Ångströms ($r = r^* \times 3.65$\,\AA). The dashed horizontal line marks $g(r) = 1$.}
+    \label{fig:melting_gr}
+\end{figure}
+
+% [INSERT THE ACTUAL PLOT — provide to the report writer]
+
+\subsection{Physical Narrative of the Transition}
+
+% Walk through each temperature's g(r) and narrate what is happening physically:
+%
+% T* = 0.2: Very sharp, tall peaks. Many coordination shells visible. Deep in solid phase.
+%           Atoms are locked into FCC lattice positions. Long-range order.
+%
+% T* = 0.4: Still sharp peaks but slightly broader. System is solid but atoms vibrate
+%           more around their lattice positions.
+%
+% T* = 0.6: Peaks broaden noticeably. Outer shells begin to merge. System approaching
+%           the melting transition. (This is near the LJ melting point T*~0.69 at ρ*=0.8442)
+%
+% T* = 0.8: First peak still prominent but significantly broader. 2nd and 3rd peaks
+%           merge into broad humps. System is partially melted / in transition region.
+%
+% T* = 1.0: Broad, decaying peaks typical of a liquid. Only the first peak remains
+%           distinct. g(r) → 1 quickly. Long-range order completely lost.
+
+\subsubsection{$\Tstar = 0.2$ — Deep Solid}
+% [WRITE HERE]
+
+\subsubsection{$\Tstar = 0.4$ — Solid}
+% [WRITE HERE]
+
+\subsubsection{$\Tstar = 0.6$ — Approaching Melting}
+% [WRITE HERE]
+
+\subsubsection{$\Tstar = 0.8$ — Near/At Melting}
+% [WRITE HERE]
+
+\subsubsection{$\Tstar = 1.0$ — Liquid}
+% [WRITE HERE]
+
+\subsection{Estimated Melting Point}
+
+% From the g(r) evolution, identify the approximate T* at which the solid-to-liquid
+% transition occurs. Compare to the known LJ melting point at ρ*=0.8442 (~T*=0.69).
+% Convert to real units for Krypton using Eq.~\eqref{eq:T_conv}.
+% Compare to the experimental melting point of Krypton: 115.79 K (at 1 atm).
+
+The transition from solid-like to liquid-like $g(r)$ behaviour occurs approximately between $\Tstar = [X]$ and $\Tstar = [Y]$, corresponding to $T \approx [X \times 162.46]$\,K to $T \approx [Y \times 162.46]$\,K for Krypton. The experimental melting point of Krypton at atmospheric pressure is $115.79$\,K.
+
+% [DISCUSS AGREEMENT OR DISCREPANCY — finite size? fixed density? pressure?]

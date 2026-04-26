@@ -1,0 +1,101 @@
+% =============================================================
+%  SECTION: Module 4 — Performance and Optimization
+%  ASSIGNED TO: [Person Name]
+%
+%  GUIDING QUESTIONS TO ANSWER:
+%   WHAT  — What is the O(N²) bottleneck? What is a Verlet neighbor list?
+%           What is NumPy vectorization?
+%   WHY   — Why does the naive force loop become a problem at N=500?
+%           Why does the skin radius allow infrequent rebuilds?
+%           Why does the shifted force potential improve energy conservation?
+%   HOW   — How is the neighbor list built? When is it rebuilt?
+%           How does vectorization replace Python for-loops?
+%  EXTRAS — Benchmark: show timing comparison naive vs optimized (optional).
+%           Explain the shifted-force potential and how it differs from
+%           the shifted potential in Module 1.
+% =============================================================
+
+\newpage
+\section{Module 4: Performance and Optimization}
+
+\subsection{What Are We Doing?}
+% Refactoring the force calculation to (1) skip distant pairs using a neighbor
+% list, and (2) use NumPy array operations instead of Python loops.
+% [WRITE HERE]
+
+\subsection{Why Are We Doing It?}
+
+\subsubsection{The \texorpdfstring{$O(N^2)$}{O(N²)} Bottleneck}
+% With N atoms, naive force loop: N*(N-1)/2 pair checks per step.
+% For N=500: ~125,000 checks every timestep. Most are beyond r_c and contribute zero.
+% Show or cite the scaling: double N → 4x slower.
+% [WRITE HERE]
+
+\subsubsection{Why Does the Skin Radius Work?}
+% Atoms move slowly relative to r_skin - r_c.
+% Only rebuild when max displacement > (r_skin - r_c)/2.
+% Analogy: you don't update your contact list every second — only when someone moves.
+% [WRITE HERE — good place for physical intuition]
+
+\subsubsection{Why the Shifted-Force Potential?}
+% Even with a shifted potential, the force magnitude has a jump at r_c.
+% This jump acts as a source/sink of energy every time a pair crosses the boundary.
+% The shifted-force potential sets both phi and F smoothly to zero at r_c.
+% [WRITE HERE]
+
+\subsection{How Is It Implemented?}
+
+\subsubsection{Verlet Neighbor List}
+
+All pairs $(i, j)$ with separation $r_{ij} < r_s$ are stored, where the skin radius is:
+\begin{equation}
+    r_s = r_c + \delta_{\text{skin}}
+    \label{eq:rskin}
+\end{equation}
+We used $r_c^* = 2.5$ and $r_s^* = 3.2$, giving a skin thickness of $0.7\,\sigma$.
+
+The list is rebuilt only when any atom has displaced more than half the skin thickness from its last recorded position:
+\begin{equation}
+    \Delta r_{\max} > \frac{r_s - r_c}{2}
+    \label{eq:rebuild}
+\end{equation}
+
+\subsubsection{The Shifted-Force Potential}
+
+To ensure both energy and force vanish at $r_c$:
+\begin{equation}
+    \phi_{\text{SF}}^*(r^*) = \phi^*(r^*) - \phi^*(r_c^*) + \left.\frac{d\phi^*}{dr^*}\right|_{r_c^*}\!\!(r^* - r_c^*)
+    \label{eq:shifted_force}
+\end{equation}
+
+% [EXPLAIN IN WORDS — what does subtracting the linear term do?]
+
+\subsubsection{NumPy Vectorization}
+
+Instead of nested loops, all pair displacements are computed simultaneously using broadcast array operations, reducing Python-level overhead by orders of magnitude.
+
+\subsection{Test Results}
+
+% Confirm:
+% 1. The optimized force routine gives identical energies to the naive version (for small N).
+% 2. Show how often the neighbor list is rebuilt (e.g., every ~X steps).
+% 3. (Optional) timing comparison: naive loop vs. vectorized.
+
+% [INSERT RESULTS / TIMING TABLE HERE]
+
+\begin{table}[H]
+    \centering
+    \caption{Comparison of naive and optimized force calculation for $N = 256$ atoms.}
+    \label{tab:m4_timing}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Method} & \textbf{Time per step (ms)} & \textbf{Energy match?} \\
+        \midrule
+        Naive (all pairs) & [value] & --- \\
+        Neighbor list + vectorized & [value] & [Yes/No] \\
+        Speedup factor & [ratio] & \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% [WRITE DISCUSSION HERE]

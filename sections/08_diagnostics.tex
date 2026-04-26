@@ -1,0 +1,90 @@
+% =============================================================
+%  SECTION: Diagnostic and Stability Analysis
+%  ASSIGNED TO: [Person Name]
+%
+%  REQUIRED CONTENT (from problem statement checklist):
+%   1. Energy Conservation: E* should be a flat line, no systematic drift.
+%   2. Fluctuation Metric: ΔE*/⟨E*⟩ ~ 1e-4.
+%   3. Zero Momentum: |P*| ≈ 0 throughout.
+%   4. K*, U*, E* all on one plot (Module 5 nuance).
+%
+%  GUIDING QUESTIONS:
+%   WHY does E* drift if dt is too large?
+%   WHAT does a "drift" vs "oscillation" tell you about the integrator?
+%   WHY must P* = 0? What happens physically if it's not?
+% =============================================================
+
+\newpage
+\section{Diagnostic and Stability Analysis}
+
+Before extracting physical properties, we must verify that the simulation is numerically stable and physically valid. Three criteria must be satisfied.
+
+\subsection{Energy Conservation}
+
+In the NVE ensemble (constant Number of atoms, Volume, and Energy), the total energy $\Estar = K^* + U^*$ must be conserved. This is the most sensitive test of the integrator's correctness.
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/diag_energy.pdf}
+    \caption{Total energy $\Estar$, kinetic energy $K^*$, and potential energy $U^*$ as a function of timestep for the full simulation ($N = 500$, $\Tstar = 1.0$). During equilibration (steps 0–2000), velocity rescaling pins $K^*$; in the production phase (steps 2000–4000), all quantities evolve freely. $\Estar$ shows no systematic drift.}
+    \label{fig:diag_energy}
+\end{figure}
+
+% Report: mean E*, std(E*) in production phase.
+% [INSERT QUANTITATIVE RESULTS HERE]
+
+\subsection{Energy Fluctuation Metric}
+
+A simulation is considered numerically stable when:
+\begin{equation}
+    \frac{\Delta \Estar}{\langle \Estar \rangle} \lesssim 10^{-4}
+    \label{eq:fluct_criterion}
+\end{equation}
+where $\Delta \Estar = \sqrt{\langle (\Estar - \langle \Estar \rangle)^2 \rangle}$ is the root-mean-square fluctuation in the production phase.
+
+\begin{table}[H]
+    \centering
+    \caption{Energy stability metrics from the production phase.}
+    \label{tab:diag_energy}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Quantity} & \textbf{Value} \\
+        \midrule
+        Mean total energy $\langle \Estar \rangle$ & [value] \\
+        RMS fluctuation $\Delta \Estar$ & [value] \\
+        Relative fluctuation $\Delta \Estar / |\langle \Estar \rangle|$ & [value] \\
+        Criterion met ($\lesssim 10^{-4}$)? & [Yes/No] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% [WRITE DISCUSSION — is the criterion met? What does this mean?]
+
+\subsection{Zero Total Linear Momentum}
+
+The total linear momentum of the system must remain zero throughout the simulation. Any non-zero $\mathbf{P}^*$ causes the entire simulation cell to drift, eventually moving atoms out of the periodic box.
+
+% Plot |P*| vs time step, or simply report the measured value.
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.7\linewidth]{figures/diag_momentum.pdf}
+    \caption{Magnitude of total linear momentum $|\mathbf{P}^*|$ as a function of timestep. The value remains at machine precision throughout, confirming that the velocity initialization correctly zeroed net momentum.}
+    \label{fig:diag_momentum}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Total linear momentum check.}
+    \label{tab:diag_momentum}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Component} & \textbf{Max $|P^*|$ during run} \\
+        \midrule
+        $P_x^*$ & [value] \\
+        $P_y^*$ & [value] \\
+        $P_z^*$ & [value] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% [WRITE BRIEF DISCUSSION]

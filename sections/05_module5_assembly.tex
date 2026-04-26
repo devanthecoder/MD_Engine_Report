@@ -1,0 +1,122 @@
+% =============================================================
+%  SECTION: Module 5 — Initialization, Equilibration & Assembly
+%  ASSIGNED TO: [Person Name]
+%
+%  GUIDING QUESTIONS TO ANSWER:
+%   WHAT  — What is the Maxwell-Boltzmann distribution?
+%           What is velocity rescaling? What is equilibration?
+%   WHY   — Why can't we just give all atoms the same speed?
+%           Why zero the net momentum before running?
+%           Why run an equilibration phase before collecting data?
+%   HOW   — How is Gaussian sampling used to initialise velocities?
+%           How does the rescaling thermostat work (lambda factor)?
+%           What are the equilibration and production phases?
+%  EXTRAS — Energy compensation: K* and U* oscillate anti-phase.
+%           Plot of K*, U*, E* all on one graph.
+%           What happens to E* during equilibration vs production?
+% =============================================================
+
+\newpage
+\section{Module 5: Initialization, Equilibration, and System Assembly}
+
+\subsection{What Are We Doing?}
+% Giving the system a physically valid starting state in terms of both
+% positions (FCC lattice, Module 2) and velocities (Maxwell-Boltzmann).
+% Then running the main MD loop: equilibrate → produce data.
+% [WRITE HERE]
+
+\subsection{Why Are We Doing It?}
+
+\subsubsection{Why Maxwell-Boltzmann Velocities?}
+% In a real gas at temperature T, atoms don't all move at the same speed.
+% Their speeds follow the MB distribution — a consequence of statistical mechanics.
+% Sampling from a Gaussian with σ = sqrt(T*) mimics this correctly.
+% [WRITE HERE — build intuition, not just formula]
+
+\subsubsection{Why Zero the Net Momentum?}
+% If P_total ≠ 0, the entire simulation box drifts in one direction.
+% Atoms start leaving one side faster than they return from the other.
+% The centre of mass must be stationary for a valid NVE ensemble.
+% [WRITE HERE]
+
+\subsubsection{Why an Equilibration Phase?}
+% We start on a perfect FCC lattice — an artificial, ordered state.
+% The system needs time to relax into a thermodynamically stable configuration.
+% During this phase, we rescale velocities to force the system to the target T*.
+% Without equilibration, the production data reflects the transient, not equilibrium.
+% [WRITE HERE]
+
+\subsection{How Is It Implemented?}
+
+\subsubsection{Velocity Initialization}
+
+Each velocity component $v_{i\alpha}$ is sampled from a Gaussian:
+\begin{equation}
+    \rho(v_{i\alpha}) = \frac{1}{\sigma\sqrt{2\pi}}\exp\!\left(-\frac{v_{i\alpha}^2}{2\sigma^2}\right),
+    \quad \sigma = \sqrt{\Tstar}
+    \label{eq:mb}
+\end{equation}
+After sampling, the mean velocity is subtracted so that $\sum_i \mathbf{v}_i = \mathbf{0}$.
+
+\subsubsection{Velocity Rescaling Thermostat}
+
+The instantaneous reduced temperature is:
+\begin{equation}
+    \Tstar_{\text{inst}} = \frac{\sum_i |\mathbf{v}_i^*|^2}{3N}
+    \label{eq:T_inst}
+\end{equation}
+To drive the system toward a target $\Tstar_{\text{target}}$, all velocities are scaled by:
+\begin{equation}
+    \lambda = \sqrt{\frac{\Tstar_{\text{target}}}{\Tstar_{\text{inst}}}}
+    \quad\Rightarrow\quad
+    \mathbf{v}_i^{\text{new}} = \lambda\,\mathbf{v}_i
+    \label{eq:rescale}
+\end{equation}
+Rescaling is applied every 10 steps during the first half of the simulation (equilibration).
+
+\subsubsection{The Master MD Loop}
+
+\begin{enumerate}
+    \item \textbf{Initialise:} FCC positions, MB velocities, compute initial forces.
+    \item \textbf{Equilibration} ($t = 0$ to $t_{\text{equil}}$): Run VV integrator; rescale velocities every 10 steps.
+    \item \textbf{Production} ($t_{\text{equil}}$ to $t_{\text{end}}$): Run VV integrator freely; accumulate energy, temperature, and structural data.
+\end{enumerate}
+
+\subsection{Energy Compensation: A Key Diagnostic}
+
+During equilibration, $K^*$ and $U^*$ fluctuate strongly as the lattice "melts" thermally.
+In a physically correct simulation, these fluctuations must cancel exactly so that $E^* = K^* + U^*$ remains flat.
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\linewidth]{figures/m5_energy_three_panel.pdf}
+    \caption{Kinetic energy $K^*$, potential energy $U^*$, and total energy $E^*$ plotted together over the full simulation. During equilibration (left half), velocity rescaling causes $K^*$ to be pinned; in the production phase (right half), all three evolve freely. The flatness of $E^*$ in the production phase confirms physical correctness.}
+    \label{fig:m5_energy}
+\end{figure}
+
+\subsection{Test Results}
+
+% Confirm:
+% 1. Average instantaneous temperature in production ≈ T_target.
+% 2. E* is flat (no drift) in production phase.
+% 3. Total linear momentum P* ≈ 0 throughout.
+% 4. E* fluctuations are ~1 part in 10^4.
+
+% [INSERT PLOTS AND QUANTITATIVE RESULTS HERE]
+
+\begin{table}[H]
+    \centering
+    \caption{Module 5 verification for $N = 256$, $\rhostar = 0.8442$, $\Tstar = 1.0$, $\delta t^* = 0.005$, 2000 steps.}
+    \label{tab:m5_test}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Quantity} & \textbf{Expected} & \textbf{Measured} \\
+        \midrule
+        $\langle \Tstar \rangle$ (production) & $\approx 1.0$ & [value] \\
+        $|\mathbf{P}^*|$ & $\approx 0$ & [value] \\
+        $\Delta E^* / \langle E^* \rangle$ & $\lesssim 10^{-4}$ & [value] \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% [WRITE DISCUSSION HERE]
