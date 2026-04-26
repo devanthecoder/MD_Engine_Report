@@ -1,91 +1,143 @@
 % =============================================================
 %  SECTION: Diagnostic and Stability Analysis
-%  ASSIGNED TO: [Person Name]
-%
-%  REQuUIRED CONTENT (from problem statement checklist):
-%   1. Energy Conservation: E* should be a flat line, no systematic drift.
-%   2. Fluctuation Metric: ΔE*/⟨E*⟩ ~ 1e-4.
-%   3. Zero Momentum: |P*| ≈ 0 throughout.
-%   4. K*, U*, E* all on one plot (Module 5 nuance).
-%
-%  GUIDING QUESTIONS:
-%   WHY does E* drift if dt is too large?
-%   WHAT does a "drift" vs "oscillation" tell you about the integrator?
-%   WHY must P* = 0? What happens physically if it's not?
 % =============================================================
 
 \newpage
 \section{Diagnostic and Stability Analysis}
 
-Before extracting physical properties, we must verify that the simulation is numerically stable and physically valid. Three criteria must be satisfied.
+Before extracting physical properties, we must verify that the simulation
+is numerically stable and physically valid. A simulation can produce
+perfectly self-consistent but entirely wrong results if the integrator
+is poorly chosen or the timestep is too large. Three criteria must be
+satisfied before we trust any output.
 
 \subsection{Energy Conservation}
 
-In the NVE ensemble (constant Number of atoms, Volume, and Energy), the total energy $\Estar = K^* + U^*$ must be conserved. This is the most sensitive test of the integrator's correctness.
+In the NVE ensemble (constant Number of atoms, Volume, and Energy), the
+total energy $\Estar = K^* + U^*$ must be conserved. This is the most
+sensitive test of the integrator's correctness. If $\Estar$ drifts
+upward or downward monotonically, the timestep $dt^*$ is too large and
+energy is being injected or extracted artificially by the integrator.
 
 \begin{figure}[H]
     \centering
-    % \includegraphics[width=\linewidth]{figures/diag_energy.pdf}
-    \caption{Total energy $\Estar$, kinetic energy $K^*$, and potential energy $U^*$ as a function of timestep for the full simulation ($N = 500$, $\Tstar = 1.0$). During equilibration (steps 0–2000), velocity rescaling pins $K^*$; in the production phase (steps 2000–4000), all quantities evolve freely. $\Estar$ shows no systematic drift.}
+    \includegraphics[width=\linewidth]{figures/energy_plot.pdf}
+    \caption{Total energy $\Estar$, kinetic energy $K^*$, and potential
+    energy $U^*$ as a function of timestep ($N = 256$, $\Tstar = 1.0$,
+    $dt^* = 0.005$). During equilibration (steps 0--2000), velocity
+    rescaling pins $K^*$ to the target; in the production phase
+    (steps 2000--4000), all quantities evolve freely under NVE. The
+    total energy $\Estar$ shows no systematic drift in the production
+    phase, confirming integrator stability.}
     \label{fig:diag_energy}
 \end{figure}
 
-% Report: mean E*, std(E*) in production phase.
-% [INSERT QUANTITATIVE RESULTS HERE]
+Note the structure of the plot: during the \textbf{equilibration phase}
+(steps 0--2000), velocity rescaling is applied every 10 steps, which
+forcibly pins $K^*$ to the target temperature. This causes visible
+oscillations in $K^*$ and $U^*$ as the system relaxes from its FCC
+lattice initial condition. In the \textbf{production phase} (steps
+2000--4000), rescaling is switched off and the system evolves freely
+under the NVE ensemble. It is only in this phase that energy conservation
+is meaningful, and it is here that we evaluate the diagnostic.
 
 \subsection{Energy Fluctuation Metric}
 
-A simulation is considered numerically stable when:
+In practice, floating-point arithmetic and the finite timestep introduce
+small, bounded oscillations in $\Estar$. The simulation is considered
+numerically stable when these fluctuations satisfy:
 \begin{equation}
     \frac{\Delta \Estar}{\langle \Estar \rangle} \lesssim 10^{-4}
     \label{eq:fluct_criterion}
 \end{equation}
-where $\Delta \Estar = \sqrt{\langle (\Estar - \langle \Estar \rangle)^2 \rangle}$ is the root-mean-square fluctuation in the production phase.
+where $\Delta \Estar = \sqrt{\langle (\Estar - \langle \Estar \rangle)^2 \rangle}$
+is the root-mean-square fluctuation computed over the production phase only.
+All quantities are reported both as totals and on a per-atom basis; the
+per-atom values are more physically meaningful for comparison across
+system sizes.
 
 \begin{table}[H]
     \centering
-    \caption{Energy stability metrics from the production phase.}
+    \caption{Energy stability metrics computed from the production phase
+    (steps 2000--4000), $N = 500$, $\Tstar = 1.0$.}
     \label{tab:diag_energy}
-    \begin{tabular}{lc}
+    \begin{tabular}{lcc}
         \toprule
-        \textbf{Quantity} & \textbf{Value} \\
+        \textbf{Quantity} & \textbf{Total} & \textbf{Per atom} \\
         \midrule
-        Mean total energy $\langle \Estar \rangle$ & [value] \\
-        RMS fluctuation $\Delta \Estar$ & [value] \\
-        Relative fluctuation $\Delta \Estar / |\langle \Estar \rangle|$ & [value] \\
-        Criterion met ($\lesssim 10^{-4}$)? & [Yes/No] \\
+        Mean total energy $\langle \Estar \rangle$                      & $-734.935$  & $-1.4699$ \\
+        RMS fluctuation $\Delta \Estar$                                 & $0.05138$   & $1.028 \times 10^{-4}$ \\
+        Relative fluctuation $\Delta \Estar / |\langle \Estar \rangle|$ & \multicolumn{2}{c}{$6.99 \times 10^{-5}$} \\
+        Criterion $\lesssim 10^{-4}$ satisfied?                         & \multicolumn{2}{c}{Yes} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-% [WRITE DISCUSSION — is the criterion met? What does this mean?]
+The relative fluctuation of $6.99 \times 10^{-5}$ comfortably satisfies
+the $10^{-4}$ criterion, confirming that $dt^* = 0.005$ is a
+sufficiently conservative timestep for this system. The total energy
+stays on its constant-energy surface to within one part in $10^4$
+throughout the entire production run.
 
 \subsection{Zero Total Linear Momentum}
 
-The total linear momentum of the system must remain zero throughout the simulation. Any non-zero $\mathbf{P}^*$ causes the entire simulation cell to drift, eventually moving atoms out of the periodic box.
+The total linear momentum of the system must remain zero throughout the
+simulation. This is not merely a numerical nicety, it is a physical
+necessity. Any non-zero $\mathbf{P}^*$ means the entire simulation cell
+is drifting through space. Combined with periodic boundary conditions,
+this causes atoms to steadily migrate across the box, eventually
+corrupting pair distances and making the trajectory unphysical.
 
-% Plot |P*| vs time step, or simply report the measured value.
+The momentum is zeroed at initialisation by subtracting the
+centre-of-mass velocity from every atom (see \hyperref[sec:mod5]{Module 5}). Since every
+force on atom $i$ from atom $j$ is equal and opposite (Newton's Third
+Law), $\mathbf{P}^*$ should remain at machine precision for the entire
+run once it is initialised to zero.
+
 \begin{figure}[H]
     \centering
-    % \includegraphics[width=0.7\linewidth]{figures/diag_momentum.pdf}
-    \caption{Magnitude of total linear momentum $|\mathbf{P}^*|$ as a function of timestep. The value remains at machine precision throughout, confirming that the velocity initialization correctly zeroed net momentum.}
+    \includegraphics[width=0.8\linewidth]{figures/momentum_plot.pdf}
+    \caption{Magnitude of total linear momentum $|\mathbf{P}^*|$ as a
+    function of timestep ($N = 500$, $\Tstar = 1.0$). The value remains
+    at $\sim 10^{-13}$ throughout, confirming that the velocity
+    initialisation correctly eliminates net momentum and that the
+    integrator preserves it.}
     \label{fig:diag_momentum}
 \end{figure}
 
 \begin{table}[H]
     \centering
-    \caption{Total linear momentum check.}
+    \caption{Maximum absolute value of each momentum component over the
+    full simulation ($N = 256$, $\Tstar = 1.0$). All values are at
+    floating-point machine precision ($\sim 10^{-13}$), confirming
+    $\mathbf{P}^* \approx \mathbf{0}$.}
     \label{tab:diag_momentum}
     \begin{tabular}{lc}
         \toprule
-        \textbf{Component} & \textbf{Max $|P^*|$ during run} \\
+        \textbf{Component} & \textbf{Max $|P^*|$ over full run} \\
         \midrule
-        $P_x^*$ & [value] \\
-        $P_y^*$ & [value] \\
-        $P_z^*$ & [value] \\
+        $P_x^*$ & $2.85 \times 10^{-13}$ \\
+        $P_y^*$ & $2.17 \times 10^{-13}$ \\
+        $P_z^*$ & $5.76 \times 10^{-13}$ \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-% [WRITE BRIEF DISCUSSION]
-\newpage
+All three components remain at $\sim 10^{-13}$ -- consistent with
+64-bit double-precision floating-point rounding errors -- for the
+entire duration of the simulation. The apparent fluctuations visible
+in Figure~\ref{fig:diag_momentum} are not physical: they are the
+inevitable consequence of finite-precision arithmetic accumulating over
+4000 timesteps, and their magnitude is twelve orders of magnitude below
+any physically relevant momentum scale. The simulation cell is
+stationary.
+
+\subsection{Summary}
+
+All three stability criteria are satisfied. The total energy shows no
+systematic drift in the production phase, with relative fluctuations of
+$6.99 \times 10^{-5}$ -- well within the $10^{-4}$ threshold. The total
+linear momentum remains at floating-point noise ($\sim 10^{-13}$)
+throughout, confirming the centre-of-mass is stationary. The MD engine
+is physically valid and numerically stable, and we proceed with extracting the
+physical properties.
