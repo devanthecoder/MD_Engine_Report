@@ -1,64 +1,199 @@
 % =============================================================
-%  SECTION: Integrated MD Engine — Main Loop
-%  ASSIGNED TO: [Person Name]
-%
-%  CONTENT:
-%   - Brief description of how all 6 modules come together.
-%   - The assembled main loop (or reference to Jupyter notebook).
-%   - Simulation parameters used (n_cells, rho*, T*, dt, steps, r_c, r_s).
+%  SECTION 7 — Integrated MD Engine
 % =============================================================
 
 \section{Integrated MD Engine}
 
-\subsection{Overview}
+\subsection{Putting It All Together}
 
-The six modules developed independently are assembled into a single, functional MD engine. The data flow is:
+Each of the six modules was built and tested on its own. Now they are connected into a single working simulation. The engine is written as one Python class, \texttt{MDSimulation}, which holds all the simulation state --- positions, velocities, forces, and the neighbour list --- and runs every module in the right order. Setting the parameters once at the start is enough; they flow automatically to every sub-routine that needs them.
 
-\begin{enumerate}
-    \item \textbf{Module 2} generates the FCC lattice and box length $L^*$.
-    \item \textbf{Module 5} initialises velocities from the Maxwell-Boltzmann distribution and zeros net momentum.
-    \item \textbf{Module 4} builds the initial Verlet neighbor list.
-    \item The main loop iterates:
-    \begin{itemize}
-        \item \textbf{Module 3} (Velocity Verlet) advances positions and velocities.
-        \item \textbf{Module 4} rebuilds the neighbor list when the displacement threshold is exceeded.
-        \item \textbf{Module 5} applies velocity rescaling during equilibration.
-        \item \textbf{Module 1} provides the force and energy for every interacting pair.
-    \end{itemize}
-    \item In the production phase, \textbf{Module 6} collects $g(r)$ snapshots every 10 steps.
-\end{enumerate}
+\subsection{How the Modules Connect}
+
+The simulation has three stages: initialisation (runs once), an equilibration loop, and a production loop. Figure~\ref{fig:md_flowchart} shows how data moves between modules at each stage.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    ibox/.style = {
+        draw, rounded corners=3pt,
+        fill=green!10, draw=green!55!black,
+        text width=8.8cm, minimum height=0.75cm,
+        align=left, inner sep=6pt, font=\small\sffamily
+    },
+    lbox/.style = {
+        draw, rounded corners=3pt,
+        fill=blue!8, draw=blue!55!black,
+        text width=8.8cm, minimum height=0.75cm,
+        align=left, inner sep=6pt, font=\small\sffamily
+    },
+    ebox/.style = {
+        draw, rounded corners=3pt,
+        fill=orange!12, draw=orange!55!black,
+        text width=3.6cm, minimum height=1.4cm,
+        align=center, inner sep=5pt, font=\small\sffamily
+    },
+    pbox/.style = {
+        draw, rounded corners=3pt,
+        fill=teal!12, draw=teal!55!black,
+        text width=3.6cm, minimum height=1.4cm,
+        align=center, inner sep=5pt, font=\small\sffamily
+    },
+    arr/.style = {->, thick, >=stealth, color=gray!65!black}
+]
+
+%% ---- INITIALISATION (green, all at explicit y) ----
+\node[ibox] (fcc)  at (0,  0.0) {\textbf{Generate FCC Lattice} \hfill \textit{[Module 2]}};
+\node[ibox] (vel)  at (0, -1.4) {\textbf{Initialise Velocities (M-B) + Zero Net Momentum} \hfill \textit{[Module 5]}};
+\node[ibox] (nb0)  at (0, -2.8) {\textbf{Build Initial Neighbour List} \hfill \textit{[Module 4]}};
+\node[ibox] (f0)   at (0, -4.2) {\textbf{Compute Initial Forces and Potential Energy} \hfill \textit{[Module 1+2]}};
+
+%% ---- LOOP BORDER (dashed) ----
+\draw[dashed, gray!45, rounded corners=5pt, line width=0.6pt]
+    (-4.8, -4.95) rectangle (4.8, -10.35);
+\node[font=\scriptsize\sffamily, color=gray!60, anchor=north west]
+    at (-4.8, -4.95) {Main Loop};
+
+%% ---- LOOP NODES (blue, explicit y) ----
+\node[lbox] (vv)      at (0, -5.75) {\textbf{Velocity Verlet Step + PBC Wrap} \hfill \textit{[Module 3+2]}};
+\node[lbox] (rebuild) at (0, -7.15) {\textbf{Neighbour List Rebuild Check} \hfill \textit{[Module 4]}};
+
+%% ---- BRANCH NODES (explicit positions) ----
+\node[ebox] (rescale) at (-2.5, -9.1)
+    {\textbf{Rescale Velocities}\\\textit{[Module 5]}\\equil.\ only};
+\node[pbox] (rdf)     at ( 2.5, -9.1)
+    {\textbf{Accumulate $g(r)$}\\\textit{[Module 6]}\\prod.\ only};
+
+%% ---- ARROWS: initialisation chain ----
+\draw[arr] (fcc.south)     -- (vel.north);
+\draw[arr] (vel.south)     -- (nb0.north);
+\draw[arr] (nb0.south)     -- (f0.north);
+\draw[arr] (f0.south)      -- (vv.north);
+
+%% ---- ARROWS: loop body ----
+\draw[arr] (vv.south)      -- (rebuild.north);
+\draw[arr] (rebuild.south) -- ++(0,-0.3) -| (rescale.north);
+\draw[arr] (rebuild.south) -- ++(0,-0.3) -| (rdf.north);
+
+%% ---- LOOP-BACK arrow (right side) ----
+\draw[arr, color=gray!55]
+    (rdf.east) -- ++(0.65, 0) |- (vv.east);
+
+\end{tikzpicture}
+\caption{Data flow through the integrated MD engine. \textbf{Green} boxes run once at the start. \textbf{Blue} boxes run every time step. \textbf{Orange} (velocity rescaling) is on only during equilibration; \textbf{teal} ($g(r)$ sampling) is on only during production. The right-side arrow shows the loop repeating back to the Verlet step.}
+\label{fig:md_flowchart}
+\end{figure}
+
+\textbf{Initialisation} happens once before the loop starts. Module 2 places $N$ atoms on an FCC lattice and sets the box length $L^*$ from the target density. Module 5 draws velocities from the Maxwell-Boltzmann distribution and subtracts the mean, so the total momentum is zero from the start. Module 4 scans all atom pairs and builds the first neighbour list. Module 1+2 uses that list to compute the starting forces and potential energy.
+
+\textbf{The equilibration loop} then runs for $N_\text{equil}$ steps. Each step advances positions and velocities with the Velocity Verlet integrator, checks whether the neighbour list needs rebuilding, and -- every \texttt{rescale\_interval} steps -- rescales velocities to hold the temperature near $T^*_\text{target}$. No data is saved during this phase.
+
+\textbf{The production loop} is identical except the thermostat is switched off and Module 6 starts collecting $g(r)$ snapshots every \texttt{rdf\_interval} steps. The frames are averaged at the end to give the final radial distribution function.
+
+\subsection{The Velocity Verlet Kernel}
+
+The core of both loops is \texttt{\_verlet\_step}, which runs the full four-step Velocity Verlet algorithm in four lines:
+
+\begin{lstlisting}[caption={The integration kernel in \texttt{md\_engine.py}. All four lines implement Equations~\eqref{eq:vv_pos}--\eqref{eq:vv_vfull} directly. The \texttt{\% L} on line 2 applies the PBC wrap in the same operation as the position update.}, label={lst:vv_kernel}]
+def _verlet_step(self, pos, vel, f, L, nb):
+    pos_new = (pos + vel*self.dt + 0.5*f*self.dt**2) % L  # step 1 + PBC
+    v_mid   =  vel + 0.5*f*self.dt                         # step 2
+    pe, f_new = self._calculate_forces(pos_new, nb, L)     # step 3
+    return pos_new, v_mid + 0.5*f_new*self.dt, pe, f_new  # step 4
+\end{lstlisting}
+
+Line 2 is worth a closer look: the modulo operator \texttt{\% L} wraps atoms back into the box in the same line as the position update -- there is no separate PBC call, and it handles arbitrarily large displacements correctly. Line 4 uses the forces at the \emph{new} positions to complete the velocity update. This is what separates Velocity Verlet from the Euler method and is the reason total energy stays flat over long runs.
+
+\subsection{Main Loop Code}
+
+The listing below shows the complete main loop. Each call is annotated with the module it belongs to.
+
+\begin{lstlisting}[caption={Integrated MD main loop from \texttt{md\_engine.py}. The structure is the same for every temperature step in the melting sweep; only \texttt{T\_star} changes.}, label={lst:main_loop}]
+# ===================== INITIALISATION ================================
+pos, L    = self._generate_fcc_lattice()           # Module 2
+N         = len(pos)
+r_max, dr_bin = L / 2.0, (L / 2.0) / self.rdf_bins
+
+T_star    = T_target / self.eps_kb
+vel       = self._initialize_velocities(N, T_star)  # Module 5
+nb_list   = self._update_neighbor_list(pos, L)      # Module 4
+pos_ref   = pos.copy()
+pe, force = self._calculate_forces(pos, nb_list, L) # Module 1+2
+
+# ===================== EQUILIBRATION =================================
+for step in range(self.equil_steps):
+    # Advance one time step (Module 3 + 2)
+    pos, vel, pe, force = self._verlet_step(pos, vel, force, L, nb_list)
+
+    # Rebuild neighbour list if any atom moved too far (Module 4)
+    if self._needs_rebuild(pos, pos_ref, L):
+        nb_list = self._update_neighbor_list(pos, L)
+        pos_ref = pos.copy()
+
+    # Rescale velocities to hold temperature (Module 5)
+    if step % self.rescale_interval == 0:
+        vel = self._rescale_velocities(vel, T_star)
+
+# ===================== PRODUCTION ====================================
+g_acc = np.zeros(self.rdf_bins)
+count = 0
+
+for step in range(self.prod_steps):
+    # Advance one time step (Module 3 + 2)
+    pos, vel, pe, force = self._verlet_step(pos, vel, force, L, nb_list)
+
+    # Rebuild neighbour list if needed (Module 4)
+    if self._needs_rebuild(pos, pos_ref, L):
+        nb_list = self._update_neighbor_list(pos, L)
+        pos_ref = pos.copy()
+
+    # Sample g(r) -- thermostat is OFF (Module 6)
+    if step % self.rdf_interval == 0:
+        _, g_curr = self._calculate_rdf(pos, L, dr_bin, r_max)
+        g_acc    += g_curr
+        count    += 1
+
+g_avg = g_acc / count   # time-averaged RDF
+\end{lstlisting}
+
+The structure is short on purpose: the real work happens inside the module methods. What the main loop does is decide \emph{when} to call each one, and in what order.
+
+One detail worth noting is \texttt{pos\_ref}. This stores where every atom was the last time the neighbour list was rebuilt. After each step, \texttt{\_needs\_rebuild} measures how far each atom has drifted from \texttt{pos\_ref}. If any single atom has moved more than $\delta_\text{skin}/2$, the list is rebuilt. This check costs one array operation per step and guarantees no close pair is ever missed between rebuilds.
 
 \subsection{Simulation Parameters}
 
+Table~\ref{tab:integrated_params} lists the parameters used throughout the project. The smaller system ($n_\text{cells} = 4$, $N = 256$) was used for the diagnostic checks in Section~\ref{sec:diagnostics}; the larger system ($n_\text{cells} = 5$, $N = 500$) was used for all Krypton property and melting runs where better $g(r)$ statistics are needed.
+
 \begin{table}[H]
     \centering
-    \caption{MD engine simulation parameters.}
-    \label{tab:params}
+    \caption{MD engine parameters. ``Engine test'' refers to all physical property and melting simulations.}
+    \label{tab:integrated_params}
     \begin{tabular}{llc}
         \toprule
-        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Engine Test} \\
         \midrule
-        Unit cells per side  & $n_{\text{cells}}$ & 4 (test) / 5 (Kr runs) \\
-        Reduced density      & $\rhostar$          & 0.8442 \\
-        Target temperature   & $\Tstar$            & 1.0 (test); see Table~\ref{tab:kr_params} \\
-        Time step            & $\delta t^*$        & 0.005 \\
-        Cutoff radius        & $r_c^*$             & 2.5 \\
-        Skin radius          & $r_s^*$             & 3.2 \\
-        Equilibration steps  & ---                 & 1000 / 2000 \\
-        Production steps     & ---                 & 1000 / 2000 \\
+        Unit cells per side      & $n_\text{cells}$                    & 5       \\
+        Total atoms              & $N = 4\,n_\text{cells}^3$           & 500     \\
+        Reduced density          & $\rho^*$                            & 0.8442  \\
+        Box length               & $L^* = (N/\rho^*)^{1/3}$           & 8.398   \\
+        Time step                & $\delta t^*$                        & 0.005   \\
+        Cutoff radius            & $r_c^*$                             & 2.5     \\
+        Skin radius              & $r_s^*$                             & 3.0     \\
+        Rebuild threshold        & $(r_s^* - r_c^*)/2$                & 0.25    \\
+        Equilibration steps      & $N_\text{equil}$                    & 2000    \\
+        Production steps         & $N_\text{prod}$                     & 2000    \\
+        Rescale interval         & steps between rescaling             & 10      \\
+        $g(r)$ sample interval   & steps between RDF frames            & 10      \\
+        $g(r)$ frames averaged   & $N_\text{prod} / \text{interval}$   & 200     \\
+        RDF bins                 & $n_b$                               & 200     \\
+        \midrule
+        \multicolumn{3}{l}{\textit{Krypton physical parameters}} \\
+        LJ diameter              & $\sigma_\text{Kr}$                  & 3.65\,\AA \\
+        LJ well depth            & $\varepsilon_\text{Kr}/k_B$         & 162.46\,K \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-\subsection{Main Loop Code}
+The skin thickness $r_s^* - r_c^* = 0.5\,\sigma$ means the rebuild threshold is $0.25\,\sigma$. At $T^* = 1.0$ with $\delta t^* = 0.005$, this threshold is crossed roughly every 6--8 steps, so the neighbour list is reused for around 85\% of all force evaluations. The $g(r)$ is sampled from 100 frames in the test run and 200 frames in the Kr runs, spread over enough production time for the peaks to converge smoothly.
 
-The complete assembled code is provided in the accompanying Jupyter Notebook. The key structure is shown below:
-
-% If you want to include the code inline, uncomment and fill:
-% \begin{lstlisting}[caption={Integrated MD main loop.}, label={lst:main_loop}]
-% [PASTE MAIN LOOP CODE HERE]
-% \end{lstlisting}
-
-% Or just reference the notebook:
-The full code, including all six modules and the integrated main loop, is available in the
-accompanying Jupyter Notebook (\texttt{module6.ipynb}).
+The full source code is in \texttt{md\_engine.py}, which accompanies this report.

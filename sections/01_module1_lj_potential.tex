@@ -2,7 +2,7 @@
 %  SECTION: Module 1 — The Physics of Interaction
 % =============================================================
 
-\newpage
+
 \section{Module 1: The Physics of Interaction}
 
 \subsection{What Are We Doing?}
@@ -56,7 +56,7 @@ Without a correction, an atom crossing the cutoff boundary would experience an i
 
 \subsubsection{Computing Energy and Force from $r^2$}
 
-The function \texttt{calculate\_lj\_properties} takes as input $r^2$ (not $r$) and returns \newline$(\phi^*_\text{shift},\; F^*/r^*)$. Working in $r^2$ throughout is a standard MD optimisation: computing $r$ from $r^2$ requires an expensive square root, but the LJ formula only ever needs even powers of $r$. All inverses are built from $1/r^2$:
+The function \texttt{calculate\_lj\_properties} takes as input $r^2$ (not $r$) and returns \newline$(\phi^*_\text{shift},\; F^*/r^*)$. Working in $r^2$ throughout is a standard MD optimisation: computing $r$ from $r^2$ requires an expensive square root\footnote{Unlike basic arithmetic, square roots lack a single-step hardware instruction. CPUs evaluate them using iterative approximation algorithms, incurring significant computational overhead across multiple function calls. Comparing and using squared distances (like in our Lennord-Jones calculations) bypasses this bottleneck entirely.}, but the LJ formula only ever needs even powers of $r$. All inverses are built from $1/r^2$:
 \begin{equation}
     \frac{1}{r^{*6}} = \left(\frac{1}{r^{*2}}\right)^3, \qquad
     \frac{1}{r^{*12}} = \left(\frac{1}{r^{*6}}\right)^2
@@ -73,16 +73,16 @@ The scalar LJ force magnitude is obtained from the potential gradient:
 \end{equation}
 To get the 3D force \emph{vector} on atom $i$ from atom $j$, we need to multiply by the unit vector $\hat{\mathbf{r}}_{ij} = \mathbf{r}_{ij}/r$. Combining:
 \begin{equation}
-    \mathbf{F}^*_i = \frac{F^*}{r^*} \cdot \mathbf{r}_{ij}
+    \mathbf{F}^*_i = F^*\cdot\hat{\mathbf{r}}_{ij} = F^* \cdot\bigg(\frac{\mathbf{r}_{ij}}{r^*}\bigg) = \frac{F^*}{r^*} \cdot \mathbf{r}_{ij}
     \label{eq:force_vector}
 \end{equation}
-By returning $F^*/r^*$ directly, the function avoids computing $r^*$ at all — the displacement vector $\mathbf{r}_{ij}$ is already available from the distance calculation, and the scalar $F^*/r^*$ can be applied to it directly.
-
+By returning $F^*/r^*$ directly, the function avoids computing $r^*$ at all, since the displacement vector $\mathbf{r}_{ij}$ is already available from the distance calculation, and the scalar $F^*/r^*$ can be applied to it directly.
+Again, we successfully avoid having to compute a square root, which as we have discussed earlier, is computationally expensive over multiple calls.
 \subsubsection{The Full Potential Curve}
 
 Figure~\ref{fig:lj_curves} shows both the unshifted and shifted potential (left panel) and the force $F^*/r^*$ (right panel). The four key features to notice are:
 \begin{enumerate}
-    \item $\phi^*(r^*=1) = 0$ — the potential crosses zero at $r^* = \sigma^* = 1$, the atomic diameter.
+    \item $\phi^*(r^*=1) = 0$ — the potential crosses zero at $r^* = 1$, i.e. at $r = \sigma$, the atomic diameter.
     \item The minimum $\phi^* = -1$ occurs at $r^*_\text{min} = 2^{1/6} \approx 1.122$ — the equilibrium bond length.
     \item The shifted curve smoothly touches zero at $r_c^* = 2.5$ with no jump.
     \item $F^*/r^*$ is positive (repulsive) for $r^* < 2^{1/6}$ and negative (attractive) for $r^* > 2^{1/6}$, reaching zero at the equilibrium distance.

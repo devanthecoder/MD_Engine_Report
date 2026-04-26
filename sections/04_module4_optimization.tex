@@ -7,11 +7,11 @@
 
 \subsection{What Are We Doing?}
 
-By Module 3, we had a working MD engine. But a working engine and a \emph{fast} engine are two very different things. The core operation --- computing the force on every atom due to every other atom --- has a computational cost that grows catastrophically with the number of particles. Module 4 confronts this bottleneck head-on with two surgical optimisations:
+By Module 3, we had a working MD engine. The core operation --- computing the force on every atom due to every other atom --- has a computational cost that grows catastrophically with the number of particles. Module 4 confronts this bottleneck head-on with two optimisations:
 
 \begin{enumerate}
     \item \textbf{Verlet Neighbour Lists}: a bookkeeping trick that eliminates the vast majority of pointless distance calculations.
-    \item \textbf{NumPy Vectorisation}: rewriting the force loop as bulk array operations, slashing Python interpreter overhead by orders of magnitude.
+    \item \textbf{NumPy Vectorisation}: rewriting the force loop as bulk array operations, preventing overhead by orders of magnitude.
 \end{enumerate}
 
 Together, these two changes transform the code from a toy that handles $N \sim 100$ atoms to an engine capable of simulating the full $N = 864$ system described in our project brief.
@@ -80,7 +80,7 @@ The fix is the \textbf{Verlet Neighbour List}. Instead of checking all $N(N-1)/2
         \filldraw[orange!90!black] (-2.8,-1.6) circle (0.06); \node[right, font=\tiny] at (-2.7,-1.6) {in skin buffer: listed, no force};
         \filldraw[gray!60]         (-2.8,-1.9) circle (0.06); \node[right, font=\tiny] at (-2.7,-1.9) {outside $r_s$: ignored entirely};
     \end{tikzpicture}
-    \caption{The Verlet neighbour list for atom $i$. Atoms within the skin radius $r_s$ are stored in the list; forces are computed only for those also within the cutoff $r_c$. Atoms outside $r_s$ are ignored completely. The skin buffer (shaded annular region) guarantees the list remains valid for several time steps without a rebuild.}
+    \caption{The Verlet neighbour list for atom $i$. Atoms within the skin radius $r_s$ are stored in the list; forces are computed only for those also within the cutoff $r_c$. Atoms outside $r_s$ are ignored completely. The skin buffer (annular region) guarantees the list remains valid for several time steps without a rebuild.}
     \label{fig:neighbour_list}
 \end{figure}
 

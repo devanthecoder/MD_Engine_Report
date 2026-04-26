@@ -24,9 +24,9 @@
 
 \subsection{What Are We Doing?}
 
-Having built the tools to compute forces (Module 1), enforce periodic geometry (Module 2), propagate motion (Module 3), and do so efficiently (Module 4), we are now ready to assemble them into a working simulation. But before the engine can run, we must answer two questions that every real physicist faces when setting up an experiment: \emph{how do we prepare the system in a physically valid state?} and \emph{how long do we wait before we trust any measurement?}
+Having built the tools to compute forces (Module 1), enforce periodic geometry (Module 2), propagate motion (Module 3), and do so efficiently (Module 4), we are now ready to assemble them into a working simulation. But before the engine can run, we must answer two questions that everyone faces when setting up an experiment: \emph{how do we prepare the system in a physically valid state?} and \emph{how long do we wait before we trust any measurement?}
 
-This module solves both problems. It assigns every atom a velocity drawn from the correct statistical distribution for the target temperature, eliminates any spurious centre-of-mass drift, and then runs an equilibration phase — a controlled warm-up period — before the simulation settles into the stable state from which we collect data.
+This module solves both problems. It assigns every atom a velocity drawn from the correct statistical distribution for the target temperature, eliminates any artificial centre-of-mass drift, and then runs an equilibration phase — a controlled warm-up period — before the simulation settles into the stable state from which we collect data.
 
 \subsection{Why Are We Doing It?}
 
@@ -102,7 +102,7 @@ As the system relaxes from the perfect FCC lattice during equilibration, the pot
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.9\linewidth]{figures/m5_temperature.pdf}
-    \caption{Instantaneous reduced temperature $T^*_\text{inst}$ over all 5000 timesteps. During equilibration the thermostat clamps the temperature tightly to the target $T^* = 1.0$ (red dashed); in production it fluctuates naturally around $\langle T^* \rangle = 1.033$ (black dotted), a small deviation from 1.0 that reflects the finite-size statistical nature of the NVE ensemble after thermostat removal.}
+    \caption{Instantaneous reduced temperature $T^*_\text{inst}$ over all 5000 timesteps. During equilibration, the thermostat acts like a strict speed limiter — every 10 steps it rescales all velocities to force the temperature back to exactly $T^* = 1.0$ (red dashed). In production, the limiter is switched off and the temperature floats freely to $\langle T^* \rangle = 1.033$ (black dotted). This small offset is not an error — with only $N = 256$ atoms, there is always a minor statistical gap between the target temperature and the one the freely-running system settles at. What matters is that the temperature is stable and not drifting.}
     \label{fig:m5_temp}
 \end{figure}
 
@@ -124,7 +124,6 @@ As the system relaxes from the perfect FCC lattice during equilibration, the pot
         $\langle \Estar \rangle$ (production)              & ---                   & $-717.16$ \\
         RMS fluctuation $\Delta \Estar$                    & ---                   & $5.34 \times 10^{-2}$ \\
         Relative fluctuation $\Delta \Estar/|\langle \Estar \rangle|$ & $\lesssim 10^{-4}$ & $7.45 \times 10^{-5}$ \\
-        Criterion met?                                      & ---                   & \textbf{Yes} \\
         \bottomrule
     \end{tabular}
 \end{table}
