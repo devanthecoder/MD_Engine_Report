@@ -32,14 +32,7 @@ energy is being injected or extracted artificially by the integrator.
     \label{fig:diag_energy}
 \end{figure}
 
-Note the structure of the plot: during the \textbf{equilibration phase}
-(steps 0--2000), velocity rescaling is applied every 10 steps, which
-forcibly pins $K^*$ to the target temperature. This causes visible
-oscillations in $K^*$ and $U^*$ as the system relaxes from its FCC
-lattice initial condition. In the \textbf{production phase} (steps
-2000--4000), rescaling is switched off and the system evolves freely
-under the NVE ensemble. It is only in this phase that energy conservation
-is meaningful, and it is here that we evaluate the diagnostic.
+The diagnostic for energy conservation is evaluated exclusively during the production phase (steps 2000--4000). During equilibration, the active velocity rescaling thermostat continually alters the kinetic energy to drive the system to the target temperature, physically preventing energy conservation. Once rescaling is disabled for the production phase, the system evolves freely as an isolated microcanonical (NVE) ensemble. It is only in this unforced state that total energy must remain strictly constant, which is confirmed by the perfectly flat red line.
 
 \subsection{Energy Fluctuation Metric}
 
@@ -75,24 +68,12 @@ system sizes.
 
 The relative fluctuation of $6.99 \times 10^{-5}$ comfortably satisfies
 the $10^{-4}$ criterion, confirming that $dt^* = 0.005$ is a
-sufficiently conservative timestep for this system. The total energy
-stays on its constant-energy surface to within one part in $10^4$
-throughout the entire production run.
-
+sufficiently conservative timestep for this system.
 \subsection{Zero Total Linear Momentum}
 
 The total linear momentum of the system must remain zero throughout the
-simulation. This is not merely a numerical nicety, it is a physical
-necessity. Any non-zero $\mathbf{P}^*$ means the entire simulation cell
-is drifting through space. Combined with periodic boundary conditions,
-this causes atoms to steadily migrate across the box, eventually
-corrupting pair distances and making the trajectory unphysical.
-
-The momentum is zeroed at initialisation by subtracting the
-centre-of-mass velocity from every atom (see \hyperref[sec:mod5]{Module 5}). Since every
-force on atom $i$ from atom $j$ is equal and opposite (Newton's Third
-Law), $\mathbf{P}^*$ should remain at machine precision for the entire
-run once it is initialised to zero.
+simulation as discussed in \ref{sec_Zero_net_momentum}.  Since every force on atom i from atom j is equal and opposite (Newton’s Third Law), $P^*$ should remain at machine precision\footnote{Machine precision is defined as the smallest representable positive number $\epsilon$ such that $1 + \epsilon \neq 1$ within the limits of the system's floating-point architecture.} for the
+entire run once it is initialized to zero.
 
 \begin{figure}[H]
     \centering
@@ -123,20 +104,13 @@ run once it is initialised to zero.
     \end{tabular}
 \end{table}
 
-All three components remain at $\sim 10^{-13}$ -- consistent with
-64-bit double-precision floating-point rounding errors -- for the
-entire duration of the simulation. The apparent fluctuations visible
-in Figure~\ref{fig:diag_momentum} are not physical: they are the
-inevitable consequence of finite-precision arithmetic accumulating over
-4000 timesteps, and their magnitude is twelve orders of magnitude below
-any physically relevant momentum scale. The simulation cell is
-stationary.
+All three momentum components stay around $10^{-13}$ throughout the simulation. The tiny fluctuations seen in Figure~\ref{fig:diag_momentum} are not physical; they are simply standard 64-bit floating-point rounding errors accumulating over the 4000 steps. Because these values are practically zero, the simulation cell remains effectively stationary.
 
 \subsection{Summary}
 
 All three stability criteria are satisfied. The total energy shows no
 systematic drift in the production phase, with relative fluctuations of
-$6.99 \times 10^{-5}$ -- well within the $10^{-4}$ threshold. The total
+$6.99 \times 10^{-5}$, well within the $10^{-4}$ threshold. The total
 linear momentum remains at floating-point noise ($\sim 10^{-13}$)
 throughout, confirming the centre-of-mass is stationary. The MD engine
 is physically valid and numerically stable, and we proceed with extracting the

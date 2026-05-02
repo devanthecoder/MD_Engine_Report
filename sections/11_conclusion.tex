@@ -6,6 +6,31 @@
 \newpage
 \section{Conclusion}
 
+This project set out to build a complete Molecular Dynamics engine from scratch and use it to
+study the structural properties of Krypton across the solid--liquid phase transition. Starting
+from first principles and assembling six modules, we arrived at a simulation that
+is physically correct, numerically stable, and capable of reproducing experimentally measurable
+properties of a real noble gas.
+
+Before trusting any physical results, we checked three simple diagnostics. The relative energy fluctuation during the production phase was $6.99 \times 10^{-5}$, which is well within the $10^{-4}$ limit. The total linear momentum remained close to zero ($\sim 10^{-13}$) throughout, showing that momentum zeroing and Newton’s Third Law are upheld. We also observed no systematic drift in energy in any of the simulations.
+
+The physical analysis of Krypton confirmed the MD engine's accuracy. At $T^* = 0.2$
+($T \approx 32.5\,\text{K}$), the simulated $g(r)$ exhibited sharp, well-resolved peaks
+matching the clear
+signature of long-range crystalline order. At $T^* = 1.0$ ($T \approx 162.5\,\text{K}$),
+the $g(r)$ collapsed to a single broad first peak decaying to 1.0 within a few angstr\"oms,
+matching the signatures of a liquid with short-range order only.
+
+The melting study drove the system through six temperatures from $T = 5\,\text{K}$ to
+$T = 162.5\,\text{K}$. As the temperature increases, $g(r)$ changes from a sharp, regular pattern of FCC peaks at low temperature to a single broad hump at high temperature, with the transition occurring between $T = 97.48\,\text{K}$ and $T = 129.97\,\text{K}$. Bracketing
+this transition placed the simulated melting point at $T^*_\text{melt} \approx 0.70$,
+corresponding to $T_\text{melt} \approx 114\,\text{K}$. This agrees with the established
+Lennard-Jones phase diagram value of $T^*_\text{melt} \approx 0.69$ and is within 2\% of the
+experimental melting point of Krypton at atmospheric pressure ($115.79\,\text{K}$). The collapse of long-range order between the temperatures on either side of the transition is consistent with the first-order character of the solid–liquid transition.
+
+% \newpage
+Overall, these results show that a Lennard–Jones potential, when implemented carefully, can reproduce the structural and thermodynamic behaviour of a real noble gas with high accuracy. This project also gave hands-on experience with all parts of a molecular dynamics code starting from the interaction model and periodic boundaries to numerical integration, performance optimisation, and analysing structural properties.
+
 % Summarise in prose (no bullet points):
 %  1. What was built (the 6-module MD engine).
 %  2. How it was validated (energy conservation, zero momentum, fluctuation metric).

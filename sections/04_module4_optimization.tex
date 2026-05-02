@@ -7,20 +7,21 @@
 
 \subsection{What Are We Doing?}
 
-By Module 3, we had a working MD engine. The core operation --- computing the force on every atom due to every other atom --- has a computational cost that grows catastrophically with the number of particles. Module 4 confronts this bottleneck head-on with two optimisations:
+By Module 3, we had a working MD engine. The core operation (computing the force on every atom due to every other atom) has a computational cost that grows catastrophically with the number of particles. Module 4 confronts this bottleneck head-on with two optimisations:
 
 \begin{enumerate}
     \item \textbf{Verlet Neighbour Lists}: a bookkeeping trick that eliminates the vast majority of pointless distance calculations.
     \item \textbf{NumPy Vectorisation}: rewriting the force loop as bulk array operations, preventing overhead by orders of magnitude.
 \end{enumerate}
 
-Together, these two changes transform the code from a toy that handles $N \sim 100$ atoms to an engine capable of simulating the full $N = 864$ system described in our project brief.
+Together, these changes transform the code from a toy that handles $N \sim 100$ atoms to an engine capable of simulating the full $N = 256$ system described in our project brief.\\[0.5em]
+    Additionally, we make use of a \textbf{Shifted-Force Potential} instead of the Shifted Potential implemented in Module 1. This is so that Force and Potential are both set to zero at the cutoff, hence preventing artificial energy changes.
 
 \subsection{Why Are We Doing It?}
 
 \subsubsection{The \texorpdfstring{$O(N^2)$}{O(N²)} Bottleneck: An Intuitive Picture}
 
-Think of a party with $N$ guests. A socialite who wants to personally greet \emph{everyone} must make $N(N-1)/2$ handshakes. Double the guests, and the number of handshakes \emph{quadruples}. This is the essence of $O(N^2)$ scaling.
+Imagine a busy restaurant kitchen with $N$ chefs, and a head chef who must check whether any two chefs are about to collide and spill something. If he does this by checking every possible pair, he makes $N(N-1)/2$ checks per sweep. Double the kitchen staff, and his workload \emph{quadruples}. This is the essence of $O(N^2)$ scaling.
 
 The naive force loop does exactly this: for $N$ atoms, it checks every possible pair $(i, j)$, performing $N(N-1)/2$ distance calculations per time step. The table below shows how rapidly this becomes unmanageable:
 
@@ -40,12 +41,25 @@ The naive force loop does exactly this: for $N$ atoms, it checks every possible 
     \end{tabular}
 \end{table}
 
-The cruel irony is that most of these pair checks are \emph{wasted}. Our LJ potential is truncated at $r_c^* = 2.5$ --- atoms further apart than this cutoff contribute \emph{exactly zero} force. Yet the naive loop computes their separation distance anyway, every single time step. For $N = 500$ at $\rho^* = 0.8$, only ${\sim}9{,}400$ out of $124{,}750$ pairs actually lie within the cutoff. In other words, \textbf{we perform 92\% of our work for zero payoff}.
+The cruel irony is that the overwhelming majority of these checks are \emph{wasted}. Our LJ potential is truncated at $r_c^* = 2.5$: any two atoms further apart than this cutoff contribute \emph{exactly zero} force to one another. Yet the naive loop dutifully computes the separation of every pair anyway, at every time step, only to discard the result. For $N = 500$ at $\rho^* = 0.8$, only ${\sim}9{,}400$ out of $124{,}750$ pairs actually lie within the cutoff. \textbf{Over 92\% of all distance calculations produce nothing useful.}
 
+A smarter head chef does not watch every possible pair of chefs simultaneously. Instead, he glances around once, notes which chefs are working near each other, and watches only those pairs for the next little while. He rebuilds his mental list only when someone moves far enough that it might have gone stale, and he pads it with a small buffer: anyone within arm's reach of the danger zone gets noted down, even if not yet close enough to collide. That buffer buys him several seconds before the list needs updating.
+
+% Last paragraph of 4.2.1
+This is precisely the idea behind the \textbf{Verlet Neighbour List}. Rather than 
+recomputing all $N(N-1)/2$ pairs at every step, we build a list of nearby atom pairs 
+once and reuse it for several time steps. By pre-filtering to only those pairs within 
+a slightly enlarged radius $r_s > r_c$ (the skin radius), we drastically reduce the 
+number of pairs we ever need to consider, with the full $O(N^2)$ scan triggered only 
+occasionally when atoms have drifted far enough to potentially invalidate the list. 
+The question is: how do we choose $r_s$, and how do we know when the list has gone stale?
+
+% Opening of 4.2.2 (replace the current first two sentences)
 \subsubsection{Why the Skin Radius Allows Infrequent Rebuilds}
 
-The fix is the \textbf{Verlet Neighbour List}. Instead of checking all $N(N-1)/2$ pairs every step, we maintain a pre-computed list of which atoms are ``close enough to possibly interact in the near future.'' We then only compute forces for pairs \emph{on the list}.
-
+The answer lies in a careful choice of the buffer between $r_s$ and $r_c$. We maintain 
+a pre-computed list of all pairs within $r_s$, computing forces only for those that also 
+fall within $r_c$, and ignore everything beyond $r_s$ entirely.
 \begin{figure}[H]
     \centering
     \begin{tikzpicture}[scale=1.5]
@@ -84,57 +98,52 @@ The fix is the \textbf{Verlet Neighbour List}. Instead of checking all $N(N-1)/2
     \label{fig:neighbour_list}
 \end{figure}
 
-The key insight is the \textbf{skin buffer}: we build the list with a radius $r_s = r_c + \delta_\text{skin}$, slightly larger than the interaction cutoff. Any atom currently outside $r_s$ would need to travel at least $\delta_\text{skin}$ before it could possibly enter the interaction zone. Since atoms move slowly relative to $\delta_\text{skin}$ over a few time steps, the list remains valid --- \emph{without a single rebuild} --- for many steps at a time.
+The key insight is the \textbf{skin buffer}: we build the list with a radius $r_s = r_c + \delta_\text{skin}$, slightly larger than the interaction cutoff. Any atom currently outside $r_s$ would need to travel at least $\delta_\text{skin}$ before it could possibly enter the interaction zone. Since atoms move slowly relative to $\delta_\text{skin}$ over a few time steps, the list remains valid (without a single rebuild) for many steps at a time.
 
-We track this safety condition explicitly. After each Velocity Verlet step, we measure the maximum displacement $\Delta r_\text{max}$ of any atom from its position at the last rebuild:
-\footnotetext{Here we are doing $\frac{\delta_\text{skin}}{2}$ because for a particle inside the annular region the distance required to cross the skin radius is $\frac{\delta_\text{skin}}{2}$.}
+We track this safety condition explicitly. After each Velocity Verlet step, we measure the maximum displacement $\Delta r_\text{max}$ of any atom from its position at the last rebuild and update the list when the below condition satisfies:
 \begin{equation}
-    \text{Rebuild if:} \quad \Delta r_\text{max} > \frac{r_s - r_c}{2} = \frac{\delta_\text{skin}}{2}\footnotemark
+    \Delta r_\text{max} > \frac{r_s - r_c}{2} = \frac{\delta_\text{skin}}{2}
     \label{eq:rebuild_criterion}
 \end{equation}
 
-The factor of 2 appears because \emph{two} atoms can simultaneously drift by $\delta_\text{skin}/2$ toward each other, collectively covering the entire buffer in a single step. Dividing by 2 is the conservative safe-guard.
-
-With $r_c^* = 2.5$, $r_s^* = 3.2$ (skin $= 0.7\sigma$, threshold $= 0.35\sigma$), and $\delta t^* = 0.005$ at $T^* \approx 1.5$, the list is rebuilt approximately \textbf{every 7 steps} --- 93\% of all force evaluations use the cached list rather than recomputing neighbours from scratch.
+The factor of 2 appears because \emph{two} atoms can simultaneously drift by $\delta_\text{skin}/2$ toward/away from each other, collectively covering the entire buffer in a single step. Dividing by 2 is the conservative safe-guard.
 
 \subsubsection{Why the Shifted-Force Potential Improves Energy Conservation}
 
-\paragraph{The gap left by the shifted potential.}
-Module 1 introduced the \emph{shifted potential}: subtract $\phi^*(r_c^*)$ from the LJ formula so that the energy goes smoothly to zero at the cutoff. This fixed the energy discontinuity. However, subtracting a constant from the potential has no effect on its derivative --- and the derivative is the force. So the force magnitude still jumps abruptly from $F^*(r_c^-)$ down to zero the moment atoms cross $r_c^*$.
+Module 1 introduced the \emph{shifted potential}: subtract $\phi^*(r_c^*)$ from the LJ formula so that the energy goes smoothly to zero at the cutoff. This fixed the energy discontinuity. However, subtracting a constant from the potential has no effect on its derivative, and the derivative is the force. So the force magnitude still jumps abruptly from $F^*(r_c^-)$ down to zero the moment atoms cross $r_c^*$.
 
 Every time a pair crosses the cutoff, the system gains or loses a small artificial energy kick. Over thousands of time steps these micro-kicks accumulate into a systematic energy drift.
 
-\paragraph{Mini-derivation of the Shifted-Force potential.}
-We want both the potential \emph{and} the force to vanish continuously at $r_c^*$. Define the \textbf{shifted force}:
+So, we want both the potential \emph{and} the force to vanish continuously at $r_c^*$. Define the \textbf{shifted force}:
 \begin{equation}
     F_\text{SF}^*(r^*) \;\equiv\; F^*(r^*) - \frac{F^*(r_c^*)}{r_c^*}\,r^*
     \label{eq:sf_force_def}
 \end{equation}
-At $r^* = r_c^*$: $F_\text{SF}^*(r_c^*) = F^*(r_c^*) - F^*(r_c^*) = 0$ \checkmark
+At $r^* = r_c^*$: $F_\text{SF}^*(r^*) \;\equiv\; F^*(r^*) - \dfrac{F^*(r_c^*)}{r_c^*}\cdot r^*_c = F^*(r^*) -F^*(r^*)=0$, confirming the \\[0.5em] validity of our Shifted-Force Potential. 
 
-Note that the correction is \emph{not} simply $F^*(r_c^*)$ (a constant), but $\bigl[F^*(r_c^*)/r_c^*\bigr]\cdot r^*$ --- a linear function of $r^*$ --- because the force vector in 3D is $\mathbf{F} = (F/r)\,\mathbf{r}$, and we must subtract a correction that preserves this structure. The scalar quantity $C \equiv F^*(r_c^*)/r_c^*$ is exactly the constant labelled $C$ in our implementation.
+Note that the correction is \emph{not} simply $F^*(r_c^*)$ (a constant), but $\bigl[F^*(r_c^*)/r_c^*\bigr]\cdot r^*$ (a linear function of $r^*$) because the force vector in 3D is $\mathbf{F} = (F/r)\,\mathbf{r}$, and we must subtract a correction that preserves this structure. We label the scalar quantity $F^*(r_c^*)/r_c^*$ as the constant $C$ in our implementation.
 
 The corresponding \textbf{Shifted-Force potential} is found by integrating:
 \begin{equation}
-    \phi_\text{SF}^*(r^*) \;=\; -\int_{r_c^*}^{r^*} F_\text{SF}^*(t)\,dt
+    \phi_\text{SF}^*(r^*) \;=\; -\int_{r_c^*}^{r^*} F_\text{SF}^*(r)\,dr
     \label{eq:sf_pot_integral}
 \end{equation}
 Splitting the integral:
 \begin{align}
-    \phi_\text{SF}^*(r^*) &= -\int_{r_c^*}^{r^*} F^*(t)\,dt \;+\; \frac{F^*(r_c^*)}{r_c^*}\int_{r_c^*}^{r^*} t\,dt \notag \\
-    &= \bigl[\phi^*(r^*) - \phi^*(r_c^*)\bigr] \;+\; \frac{F^*(r_c^*)}{r_c^*}\cdot\frac{r^{*2} - r_c^{*2}}{2}
+    \phi_\text{SF}^*(r^*) &= -\int_{r_c^*}^{r^*} F^*(r)\,dr \;+\; \frac{F^*(r_c^*)}{r_c^*}\int_{r_c^*}^{r^*} r\,dr \notag \\
+    &= \bigl[\phi^*(r^*) - \phi^*(r_c^*)\bigr] \;+\; \frac{F^*(r_c^*)}{r_c^*}\cdot\frac{(r^*)^2 - (r_c^*)^2}{2}
     \label{eq:sf_pot_final}
 \end{align}
-where we used $F^* = -d\phi^*/dr^*$, so $-\int F\,dt = \phi(r) - \phi(r_c)$.
+where we used $F^* = -\dfrac{d\phi^*}{dr^*}$, so $-\int F^*\,dr = \phi^*(r^*) - \phi^*(r_c^*)$.
 
 Equation~\eqref{eq:sf_pot_final} is directly encoded in our Module 4 implementation as:
 \[
-    \texttt{potE} = \underbrace{\phi - \phi_c}_{\text{shifted pot.}} \;+\; \underbrace{\tfrac{1}{2}\,C\,(r^2 - r_c^2)}_{\text{quadratic correction}}
+    \texttt{potE} = \underbrace{\phi^* - \phi_c^*}_{\text{shifted pot.}} \;+\; \underbrace{\tfrac{1}{2}\,C\,((r^*)^2 - (r_c^*)^2)}_{\text{quadratic correction}}
 \]
 where \texttt{force\_by\_rc} plays the role of $C = F^*(r_c^*)/r_c^*$, and all quantities are in terms of $r^2$ to avoid unnecessary square roots.
 
 \paragraph{What this achieves in practice.}
-Figure~\ref{fig:sf_potential} shows the two curves side by side: the shifted potential (from Module 1) has a zero in the energy but a jump in the force; the shifted-force potential has zeros in \emph{both}. The linear correction introduced in Eq.~\eqref{eq:sf_pot_final} is small --- the two potentials are nearly indistinguishable at distances well inside the cutoff --- but eliminates the force discontinuity entirely.
+Figure~\ref{fig:sf_potential} shows the two curves side by side: the shifted potential (from Module 1) has a zero in the energy but a jump in the force; the shifted-force potential has zeros in \emph{both}. The linear correction introduced in Eq.~\eqref{eq:sf_pot_final} is small (the two potentials are nearly indistinguishable at distances well inside the cutoff) but eliminates the force discontinuity entirely.
 
 \begin{figure}[H]
     \centering
@@ -145,7 +154,7 @@ Figure~\ref{fig:sf_potential} shows the two curves side by side: the shifted pot
 
 \subsubsection{Why Vectorisation Helps So Much}
 
-Python's \texttt{for} loops are slow because the interpreter re-evaluates every iteration --- type-checking, memory allocation --- thousands of times per loop. NumPy bypasses all of this by operating on contiguous memory blocks in compiled C code. A loop over $N^2$ pairs that takes seconds in pure Python completes in milliseconds as a vectorised array subtraction and sum.
+Python's \texttt{for} loops are slow because the interpreter re-evaluates every iteration (type-checking, memory allocation) thousands of times per loop. NumPy bypasses all of this by operating on contiguous memory blocks in compiled C++ code. A loop over $N^2$ pairs that takes seconds in pure Python completes in milliseconds as a vectorised array subtraction and sum.
 
 The speedup comes not from a better algorithm but from delegating the numerical heavy-lifting to the hardware-optimised NumPy backend. The pair-selection logic (``which atoms are within $r_s$?'') becomes a single boolean mask on a 2D distance matrix, and the force accumulation becomes an indexed scatter via \texttt{np.add.at}.
 
@@ -153,7 +162,7 @@ The speedup comes not from a better algorithm but from delegating the numerical 
 
 \subsubsection{Building the Neighbour List}
 
-At the start of the simulation and whenever Eq.~\eqref{eq:rebuild_criterion} is triggered, we compute all pairwise separations using the Minimum Image Convention and store every pair $(i, j)$ with $i < j$ whose squared separation is less than $r_s^{*2}$. Because we work with $r^2$ throughout, we never take a square root --- a classical MD trick that saves one expensive operation per pair (see Allen \& Tildesley Section 5.2.2 on ``Avoiding the square root'').
+At the start of the simulation and whenever Eq.~\eqref{eq:rebuild_criterion} is triggered, we compute all pairwise separations using the Minimum Image Convention and store every pair $(i, j)$ with $i < j$ whose squared separation is less than $r_s^{*2}$. Because we work with $r^2$ throughout, we never have to take a square root.
 
 Between rebuilds, the displacement of each atom from its position at the last rebuild is tracked. The rebuild is triggered only when any single atom's displacement exceeds $\delta_\text{skin}/2$, ensuring no newly relevant neighbour can have been missed.
 
@@ -172,9 +181,8 @@ The integration step in Module 4 is identical to Module 3, but the force subrout
 We measured the wall-clock time per force call for both the naive and the optimised routines across three system sizes, averaged over 10 evaluations. In each case, the neighbour list was already built so the timing isolates the cost of force evaluation alone.
 
 \begin{table}[H]
+    \small
     \centering
-    \caption{Timing: naive (all-pairs) vs.\ neighbour-list + vectorised force. $r_c^* = 2.5$, $r_s^* = 3.0$, $\rho^* = 0.8442$.}
-    \label{tab:m4_timing}
     \begin{tabular}{lccccc}
         \toprule
         \textbf{$N$} & \textbf{Total pairs} & \textbf{Skin-list pairs} & \textbf{Naive (ms)} & \textbf{Optimised (ms)} & \textbf{Speedup} \\
@@ -185,9 +193,10 @@ We measured the wall-clock time per force call for both the naive and the optimi
         864 ($n=6$) & 372{,}816 & 57{,}888 & 50.81 & 4.91 & 10.3$\times$ \\
         \bottomrule
     \end{tabular}
+    \caption{Timing: naive (all-pairs) vs.\ neighbour-list + vectorised force. $r_c^* = 2.5$, $r_s^* = 3.0$, $\rho^* = 0.8442$.}
+    \label{tab:m4_timing}
 \end{table}
-Two features stand out. First, the speedup \emph{grows with $N$}: as the system grows, an ever-smaller fraction of all pairs falls within the skin radius (92\% for $N=108$ versus 27\% for $N=500$), so the neighbour list becomes proportionally more beneficial. At $N=864$, the optimised routine is already $10\times$ faster than the naive approach. Second, the energies returned by both routines agree to machine precision ($|\Delta E^*| < 10^{-8}$), confirming that the optimisation is \emph{exact} --- no approximations are introduced.
-
+Two features stand out. First, the speedup \emph{grows with $N$}: as the system grows, an ever-smaller fraction of all pairs falls within the skin radius (92\% for $N=108$ versus 27\% for $N=500$), so the neighbour list becomes proportionally more beneficial. At $N=864$, the optimised routine is already $10\times$ faster than the naive approach. Second, the energies returned by both routines agree to machine precision ($|\Delta E^*| < 10^{-8}$), confirming that the optimisation is \emph{exact} (no approximations are introduced).
 \subsubsection{Energy Match Verification}
 
 \begin{table}[H]
@@ -207,7 +216,7 @@ $N$ & $E^*_{\mathrm{naive}}$ & $E^*_{\mathrm{opt}}$ & $|\Delta E^*|$ \\
 
 \subsubsection{Neighbour List Rebuild Frequency}
 
-For a production run with $N = 32$ atoms, $T^* \approx 1.5$, $\delta t^* = 0.005$, and skin thickness $\delta_\text{skin} = 0.7\,\sigma$, the list was rebuilt \textbf{69 times over 500 steps} --- once every $\approx 7$ steps on average. This means the optimised routine avoids a full $O(N^2)$ scan for approximately \textbf{86\% of all time steps}, paying only the cost of a displacement-check array operation per step.
+For a production run with $N = 32$ atoms, $T^* \approx 1.5$, $\delta t^* = 0.005$, and skin thickness $\delta_\text{skin} = 0.7\,\sigma$, the list was rebuilt \textbf{69 times over 500 steps}: once every $\approx 7$ steps on average. This means the optimised routine avoids a full $O(N^2)$ scan for approximately \textbf{86\% of all time steps}, paying only the cost of a displacement-check array operation per step.
 
 \begin{figure}[H]
     \centering

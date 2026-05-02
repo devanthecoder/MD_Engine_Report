@@ -21,9 +21,9 @@
 
 \subsection{What Are We Doing?}
 
-At the heart of any MD simulation lies a deceptively simple question: given where every atom is \emph{right now} and how fast it is moving, where will it be a moment from now? This module answers that question. We need an algorithm to evolve atomic positions and velocities forward in time by numerically solving Newton's second law, $\mathbf{F} = m\mathbf{a}$, for every atom at every timestep.
+At the heart of any MD simulation lies a really simple question: given where every atom is \emph{right now} and how fast it is moving, where will it be a moment from now? This module answers that question. We need an algorithm to evolve atomic positions and velocities forward in time by numerically solving Newton's second law, $\mathbf{F} = m\mathbf{a}$, for every atom at every timestep.
 
-The key word is \emph{numerically}. Rather than calculating a single, overarching formula for the atoms' trajectories, we break continuous time into tiny discrete intervals $\delta t^*$ and approximate their motion step by step. The algorithm that does this for us is the \textbf{Velocity Verlet integrator}, the workhorse of modern MD. But this computational heavy lifting begs an immediate question:
+We do this \emph{numerically}. Rather than calculating a single, all encompassing formula for the atoms' trajectories, we break continuous time into tiny discrete intervals $\delta t^*$ and approximate their motion step by step. The algorithm that does this for us is the \textbf{Velocity Verlet integrator}, it serves as the core of modern MD. But this computational effort gives rise to the question:
 
 \subsection{Why Are We Doing It?}
 
@@ -35,11 +35,11 @@ Even for just two atoms, the LJ force depends nonlinearly on the separation $r^*
 
 The simplest possible approach, the Euler method, updates each atom using only the information available at the very start of the time step:
 $$\mathbf{r}_i(t+\delta t) \approx \mathbf{r}_i(t) + \mathbf{v}_i(t)\,\delta t, \qquad \mathbf{v}_i(t+\delta t) \approx \mathbf{v}_i(t) + \mathbf{a}_i(t)\,\delta t$$
-This looks perfectly logical, but it has a fatal flaw: it assumes the force acting on the atom remains completely constant throughout the entire time step $\delta t$. Imagine driving on a winding road, but you are only allowed to adjust your steering wheel once every few seconds, locking it in place in between. Because you are ignoring how the curve of the road changes during those few seconds, you will continuously drift further and further off your path. Similarly, in an Euler simulation, using a "locked" and outdated force to push an atom forward causes small errors to continually compound in the same direction. Because of this the total energy of the system doesn't just fluctuate; it drifts, steadily growing or shrinking until the simulation blows up and becomes physically meaningless.
+This looks perfectly logical, but it has a fatal flaw: it assumes the force acting on the atom remains completely constant throughout the entire time step $\delta t$. Imagine driving on a winding road, but you are only allowed to adjust your steering wheel once every few seconds, locking it in place in between. Because you are ignoring how the curve of the road changes during those few seconds, you will continuously drift further and further off your path. Similarly, in an Euler simulation, using a fixed and outdated force to push an atom forward causes small errors to continually grow in the same direction. Because of this the total energy of the system doesn't just fluctuate; it drifts, steadily growing or shrinking until the simulation blows up and becomes physically meaningless.
 
-The Velocity Verlet algorithm fixes this "blind spot" by peeking ahead. Instead of assuming the force is constant, it updates the velocity using an average of the forces at \emph{both} the old and the new positions:
+The Velocity Verlet algorithm fixes this issue by briefly looking ahead before updating the motion. Instead of assuming the force is constant, it updates the velocity using an average of the forces at \emph{both} the old and the new positions:
 $$\mathbf{v}_i(t+\delta t) = \mathbf{v}_i(t) + \tfrac{1}{2}\bigl[\mathbf{a}_i(t) + \mathbf{a}_i(t+\delta t)\bigr]\,\delta t$$
-Returning to our driving analogy, this is like checking the curve of the road at your destination and averaging it with your starting steering angle to make a much smoother, more accurate turn. By factoring in how the forces are changing \emph{during} the movement, the overshoots and undershoots naturally cancel each other out. Because of this beautifully balanced approach, the numerical errors don't compound. The system's total energy stays exceptionally stable, oscillating within a very tight band around its true conserved value forever, which is exactly what we require  .
+Coming back to our driving analogy, this is like checking the curve of the road at your destination and averaging it with your starting steering angle to make a much smoother, more accurate turn. By factoring in how the forces are changing \emph{during} the movement, the overshoots and undershoots naturally cancel each other out. Because of this balanced approach, the numerical errors don't grow. The system's total energy stays stable, oscillating within a very tight band around its true conserved value forever, which is exactly what we require.
 
 \subsection{How Is It Implemented?}
 
@@ -61,14 +61,14 @@ Each timestep $\delta t^*$ proceeds through four operations. In reduced units, $
         \label{eq:vv_vhalf}
     \end{equation}
 
-    \item \textbf{Recompute forces} from the new positions. This is the most expensive step, and it must happen \emph{after} moving the atoms and \emph{before} completing the velocities.
+    \item \textbf{Recompute forces} from the new positions. This is the most computationally intensive step, and it must happen \emph{after} moving the atoms and \emph{before} completing the velocities.
 
     \item \textbf{Complete velocity update} using the \emph{new} forces:
     \begin{equation}
         \mathbf{v}_i(t + \delta t) = \mathbf{v}_i\!\left(t + \tfrac{1}{2}\delta t\right) + \tfrac{1}{2}\mathbf{a}_i(t+\delta t)\,\delta t
         \label{eq:vv_vfull}
     \end{equation}
-    Steps 2 and 4 together implement the force-averaging that gives Velocity Verlet its superior stability.
+    Steps 2 and 4 together implement the force averaging that gives Velocity Verlet its stability.
 \end{enumerate}
 
 \subsubsection{Kinetic and Potential Energy}
@@ -102,9 +102,9 @@ To verify the integrator, we ran a 500-step simulation with $N = 108$ atoms ($n_
     \label{fig:m3_energy}
 \end{figure}
 
-The oscillations of $K^*$ and $U^*$ seen in Figure~\ref{fig:m3_energy} are a direct reflection of the system's physical dynamics. The simulation begins with atoms arranged in a tight, artificial grid. As the system naturally expands and "relaxes" into a more stable state, the atoms rapidly accelerate, converting built-up potential energy into kinetic energy. They continue to continuously trade energy back and forth as they interact.
+The oscillations of $K^*$ and $U^*$ seen in Figure~\ref{fig:m3_energy} are a direct reflection of the system's physical dynamics. The simulation begins with atoms arranged in a tight, artificial grid. As the system naturally expands and reaches a more stable state, the atoms rapidly accelerate, converting built up potential energy into kinetic energy. They continue to continuously trade energy back and forth as they interact.
 
-The most critical feature of this graph, however, is the red line. Despite the massive internal shifts between kinetic and potential energy, the Total Energy ($E^*$) remains perfectly flat. This constant $E^*$ proves that our Velocity Verlet integrator is stable and conservative; it successfully tracks the complex atomic movements without artificially leaking or generating energy due to integration errors.
+The most important part of this graph is the red line. Despite the immense internal shifts between kinetic and potential energy, the Total Energy ($E^*$) remains flat. This constant $E^*$ proves that our Velocity Verlet integrator is stable and conservative; it successfully tracks the complex atomic movements without unintentionally losing or generating energy due to integration errors.
 
 \begin{table}[H]
     \centering
@@ -125,11 +125,11 @@ The relative fluctuation of $2.7398 \times 10^{-5}$ is nearly one orders of magn
 
 \subsubsection{What Happens When the Time Step Is Too Large?}
 
-Figure~\ref{fig:m3_dt_compare} illustrates the consequence of choosing an overly large $\delta t^*$. With $\delta t^* = 0.005$ (left panel), the total energy of a two-atom test system oscillates tightly around a constant mean; the integrator is stable. With $\delta t^* = 0.05$ (right panel), the energy immediately begins to climb and diverges catastrophically within a few dozen steps, reaching unphysical scales on the order of $10^{33}$. This happens because the core assumption, that the LJ interaction remains approximately constant across one time interval, breaks down completely when $\delta t^*$ is too large. The atoms drastically overshoot their equilibrium positions, generating enormous repulsive forces that spuriously inject massive amounts of energy into the system.
+Figure~\ref{fig:m3_dt_compare} illustrates the consequence of choosing an overly large $\delta t^*$. With $\delta t^* = 0.005$ (left panel), the total energy of a two-atom test system oscillates tightly around a constant mean; the integrator is stable. With $\delta t^* = 0.05$ (right panel), the energy immediately begins to climb and diverges rapidly within a few dozen steps, reaching unphysical scales in the order of $10^{33}$. This happens because the core assumption, that the LJ interaction remains approximately constant across one time interval, breaks down completely when $\delta t^*$ is too large. The atoms drastically overshoot their equilibrium positions, generating huge repulsive forces that introduce unrealistic energy into the system.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/m3_timestep_comparison.pdf}
-    \caption{Effect of time step size on energy conservation for a two-atom LJ system. \textbf{Left:} $\delta t^* = 0.005$; total energy $E^*$ is stable, oscillating narrowly around the mean (dashed). \textbf{Right:} $\delta t^* = 0.05$; the integrator is immediately unstable; $E^*$ diverges due to accumulated truncation error. Any systematic drift on a plot like this is a definitive sign that $\delta t^*$ must be reduced.}
+    \caption{Effect of time step size on energy conservation for a two-atom LJ system. \textbf{Left:} $\delta t^* = 0.005$; total energy $E^*$ is stable, oscillating narrowly around the mean (dashed). \textbf{Right:} $\delta t^* = 0.05$; the integrator is unstable; $E^*$ diverges due to accumulated truncation error. Any systematic drift on a plot like this is a definitive sign that $\delta t^*$ must be reduced.}
     \label{fig:m3_dt_compare}
 \end{figure}

@@ -6,11 +6,11 @@
 
 \subsection{Putting It All Together}
 
-Each of the six modules was built and tested on its own. Now they are connected into a single working simulation. The engine is written as one Python class, \texttt{MDSimulation}, which holds all the simulation state, positions, velocities, forces, and the neighbour list, and runs every module in the right order. Setting the parameters once at the start is enough; they flow automatically to every subroutine that needs them.
+"Each of the six modules was independently built and tested before being integrated into a single working simulation. The core engine is implemented as a single Python class, \texttt{MDSimulation}. This class maintains the complete simulation state, including positions, velocities, forces, and the Verlet neighbour list, and orchestrates the execution of each module in the correct sequence.
 
 \subsection{How the Modules Connect}
 
-The simulation has three stages: initialisation (runs once), an equilibration loop, and a production loop. Figure~\ref{fig:md_flowchart} shows how data moves between modules at each stage.
+The simulation is executed in three distinct phases: initialisation, an equilibration loop, and a production loop. While Figure~\ref{fig:md_flowchart} maps the high-level data routing between modules, the specific physical constraints and parameters applied during each phase are detailed below.
 
 \begin{figure}[H]
 \centering
@@ -81,17 +81,15 @@ The simulation has three stages: initialisation (runs once), an equilibration lo
 \caption{Data flow through the integrated MD engine. \textbf{Green} boxes run once at the start. \textbf{Blue} boxes run every time step. \textbf{Orange} (velocity rescaling) is on only during equilibration; \textbf{teal} ($g(r)$ sampling) is on only during production. The right side arrow shows the loop repeating back to the Verlet step.}
 \label{fig:md_flowchart}
 \end{figure}
-\subsection{How the Modules Connect}
+\begin{description}
+    \item[Initialisation (Runs Once):] Establishes the starting state. The box length $L^*$ is derived from the target density $\rho^*$ or the lattice parameter $a$, and atoms are placed on an FCC lattice. Initial velocities are drawn from a Maxwell-Boltzmann distribution, with the centre-of-mass velocity explicitly subtracted to ensure zero net momentum. Finally, the baseline neighbour list, Lennard-Jones forces, and potential energies are computed to bootstrap the integrator.
 
-The simulation runs in three stages: initialisation (once), equilibration, and production. Figure~\ref{fig:md_flowchart} shows how information moves between the six modules during each stage.
+    \item[Equilibration ($N_{\text{equil}}$ steps):] Drives the system toward the target temperature $T^*_{\text{target}}$. Positions and velocities are integrated via Velocity Verlet, with periodic boundaries strictly enforced via modulo arithmetic during the position update. The neighbour list is dynamically rebuilt only if an atom's displacement exceeds half the skin distance. To force thermalization\footnote{While thermalization broadly describes a physical system relaxing toward thermal equilibrium, in this context it specifically refers to the algorithmic process of rescaling atomic velocities to drive and maintain the system at the target reduced temperature, $T^*$.}, velocities are rescaled every \texttt{rescale\_interval} (10 steps in this work). No structural data is collected during this phase.
 
-\textbf{Initialisation} is performed only once at the beginning of the simulation. First, Module 2 generates the FCC lattice and determines the simulation box length $L^*$ from the target reduced density $\rho^*$. Next, Module 5 assigns initial velocities by drawing from the Maxwell--Boltzmann distribution and subtracting the centre-of-mass velocity so that the total momentum is exactly zero. Module 4 then builds the first neighbour list using the initial particle positions. Finally, Module 1 calculates the initial Lennard-Jones forces and potential energy using that neighbour list. These forces are required before the first Velocity Verlet step can begin.
+    \item[Production (NVE Ensemble):] Simulates the natural, unforced dynamics of the system. The velocity rescaling thermostat is disabled to strictly conserve energy (NVE ensemble). Instead, the algorithm focuses on data collection, sampling the radial distribution function $g(r)$ every \texttt{rdf\_interval} steps for subsequent time-averaging and structural analysis.
+\end{description}
 
-\textbf{The equilibration loop} runs for $N_{\text{equil}}$ time steps. At each step, Module 3 advances positions and velocities using the Velocity Verlet integrator, while periodic boundary wrapping from Module 2 is applied during the position update itself using the modulo operation. After the move, Module 4 checks whether any atom has moved more than half the neighbour-list skin distance from its reference position; if so, the neighbour list is rebuilt. Every \texttt{rescale\_interval} steps (10 in this work), Module 5 rescales the velocities so that the system temperature remains close to the target value $T^*_{\text{target}}$. No structural data is collected during equilibration because the system is still relaxing toward equilibrium.
-
-\textbf{The production loop} follows the same integration and neighbour-list procedure, but the thermostat is switched off so that the dynamics evolve naturally in the NVE ensemble. Instead of velocity rescaling, Module 6 samples the radial distribution function $g(r)$ every \texttt{rdf\_interval} steps. These snapshots are accumulated and averaged over time to obtain the final RDF used for structural analysis.
-
-The same sequence is repeated for every temperature point in the melting sweep; only the target reduced temperature $T^*$ changes between runs.
+To execute the full melting sweep, this entire three-stage pipeline is re-initialized and executed for each individual temperature point.
 
 \subsection{The Velocity Verlet Kernel}
 
@@ -105,79 +103,84 @@ def _verlet_step(self, pos, vel, f, L, nb):
     return pos_new, v_mid + 0.5*f_new*self.dt, pe, f_new  # step 4
 \end{lstlisting}
 
-Line 2 is worth a closer look: the modulo operator \texttt{\% L} wraps atoms back into the box in the same line as the position update; there is no separate PBC call, and it handles arbitrarily large displacements correctly. Line 4 uses the forces at the \emph{new} positions to complete the velocity update. This is what separates Velocity Verlet from the Euler method and is the reason total energy stays flat over long runs.
-\subsection{Main Loop Code}
+Line 2 is worth a closer look: the modulo operator \texttt{\% L} wraps atoms back into the box in the same line as the position update; there is no separate PBC call, and it handles arbitrarily large displacements correctly. Line 4 uses the forces at the \emph{new} positions to complete the velocity update. 
 
-The listing below shows the complete main loop. Each call is annotated with the module it belongs to.
+\subsection{Main Loop Architecture}
 
-\begin{lstlisting}[caption={Integrated MD main loop from \texttt{md\_engine.py}. The structure is the same for every temperature step in the melting sweep; only \texttt{T\_star} changes.}, label={lst:main_loop}]
-# ===================== INITIALISATION ================================
-pos, L    = self._generate_fcc_lattice()            # Module 2
-N         = len(pos)
-r_max, dr_bin = L / 2.0, (L / 2.0) / self.rdf_bins
+As the simulation framework was scaled to accommodate comprehensive temperature sweeps and diagnostic tracking, the core execution loop was abstracted into a parallelized architecture. The listing below presents a high-level structural map of the \texttt{MDSimulation} execution flow, highlighting how the modules interact within a given worker process.
 
-T_star    = T_target / self.eps_kb
-vel       = self._initialize_velocities(N, T_star)  # Module 5
-nb_list   = self._update_neighbor_list(pos, L)      # Module 4
-pos_ref   = pos.copy()
-pe, force = self._calculate_forces(pos, nb_list, L) # Module 1+2
+\begin{lstlisting}[language=Python, caption={High-level architectural map of the integrated MD execution flow. The main thread distributes the workload, while individual worker processes handle the time integration and data collection for each temperature point.}, label={lst:main_loop}]
+# 1. Parallel Task Manager (Main Thread)
+def run(self):
+    pos0, L = self.generate_fcc_lattice()
+    
+    # Delegate each temperature run to a parallel worker process
+    results = pool.map(self._run_one_temperature, worker_args)
+    return results
 
-# ===================== EQUILIBRATION ================================
-for step in range(self.equil_steps):
-    # Advance one time step (Module 3 + 2)
-    pos, vel, pe, force = self._verlet_step(pos, vel, force, L, nb_list)
+# 2. Core Worker Function (Executes per T*)
+def _run_one_temperature(args):
+    # ===================== INITIALISATION ===========================
+    pos, vel, force, nb_list = bootstrap_system_state(args)
+    pos_ref = pos.copy()
+    
+    # ===================== EQUILIBRATION ============================
+    for step in range(equil_steps):
+        pos, vel, pe, force = verlet_step(pos, vel, force, nb_list)
+        
+        # Rebuild neighbour list if any atom drifted too far
+        if needs_rebuild(pos, pos_ref):
+            nb_list = update_neighbor_list(pos)
+            pos_ref = pos.copy()
+            
+        # Rescale velocities to force target temperature
+        if step % rescale_interval == 0:
+            vel = rescale_velocities(vel, T_star)
+            
+        record_diagnostics(kin_E, pot_E, momentum)
 
-    # Rebuild neighbour list if any atom moved too far (Module 4)
-    if self._needs_rebuild(pos, pos_ref, L):
-        nb_list = self._update_neighbor_list(pos, L)
-        pos_ref = pos.copy()
+    # ===================== PRODUCTION ===============================
+    for step in range(prod_steps):
+        pos, vel, pe, force = verlet_step(pos, vel, force, nb_list)
+        
+        if needs_rebuild(pos, pos_ref):
+            nb_list = update_neighbor_list(pos)
+            pos_ref = pos.copy()
+            
+        record_diagnostics(kin_E, pot_E, momentum)
+        
+        # Sample structural data (Thermostat is OFF)
+        if step % rdf_interval == 0:
+            accumulate_rdf(pos)
 
-    # Rescale velocities to hold temperature (Module 5)
-    if step % self.rescale_interval == 0:
-        vel = self._rescale_velocities(vel, T_star)
-
-# ===================== PRODUCTION ================================
-g_acc = np.zeros(self.rdf_bins)
-count = 0
-
-for step in range(self.prod_steps):
-    # Advance one time step (Module 3 + 2)
-    pos, vel, pe, force = self._verlet_step(pos, vel, force, L, nb_list)
-
-    # Rebuild neighbour list if needed (Module 4)
-    if self._needs_rebuild(pos, pos_ref, L):
-        nb_list = self._update_neighbor_list(pos, L)
-        pos_ref = pos.copy()
-
-    # Sample g(r), thermostat is OFF (Module 6)
-    if step % self.rdf_interval == 0:
-        _, g_curr = self._calculate_rdf(pos, L, dr_bin, r_max)
-        g_acc    += g_curr
-        count    += 1
-
-g_avg = g_acc / count   # time averaged RDF
+    return time_averaged_rdf, diagnostic_traces
 \end{lstlisting}
 
-The structure is short on purpose: the real work happens inside the module methods. What the main loop does is decide \emph{when} to call each one, and in what order.
+The main \texttt{run()} method optimizes execution by using a multiprocessing pool to evaluate multiple reduced temperatures ($T^*$) concurrently. Each worker process isolates the system state and handles two main phases: equilibration and production. 
 
-One detail worth noting is \texttt{pos\_ref}. This stores where every atom was the last time the neighbour list was rebuilt. After each step, \texttt{\_needs\_rebuild} measures how far each atom has drifted from \texttt{pos\_ref}. If any single atom has moved more than $\delta_\text{skin}/2$, the list is rebuilt. This check costs one array operation per step and guarantees no close pair is ever missed between rebuilds.
+Two key features define this execution loop:
+\begin{itemize}
+    \item \textbf{Dynamic Neighbour Lists:} The simulation tracks atomic displacements from a reference state (\texttt{pos\_ref}). The neighbour list is only rebuilt when an atom moves further than $\delta_\text{skin}/2$, guaranteeing accurate force calculations with minimal computational overhead.
+    \item \textbf{Diagnostic Tracking:} Kinetic energy, potential energy, and net momentum are recorded at every step to verify numerical stability and ensure energy conservation during the microcanonical (NVE) production phase.
+\end{itemize} 
+\newpage
 
 \subsection{Simulation Parameters}
 
-Table~\ref{tab:integrated_params} lists the parameters used throughout the project. The system ($n_\text{cells} = 5$, $N = 500$) was used for all Krypton properties, diagnostics, and melting runs.
+Table~\ref{tab:integrated_params} lists the parameters used throughout the project. The system ($n_\text{cells} = 4$, $N = 256$) was used for all Krypton properties, diagnostics, and melting runs. The full source code is in \texttt{md\_engine.py}, which accompanies this report.
 
 \begin{table}[H]
     \centering
-    \caption{MD engine parameters. ``Engine test'' refers to all physical property and melting simulations.}
+    \caption{MD engine parameters.}
     \label{tab:integrated_params}
     \begin{tabular}{llc}
         \toprule
-        \textbf{Parameter} & \textbf{Symbol} & \textbf{Engine Test} \\
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
         \midrule
-        Unit cells per side      & $n_\text{cells}$                  & 5       \\
-        Total atoms              & $N = 4\,n_\text{cells}^3$         & 500     \\
+        Unit cells per side      & $n_\text{cells}$                  & 4       \\
+        Total atoms              & $N = 4\,n_\text{cells}^3$         & 256     \\
         Reduced density          & $\rho^*$                          & 0.8442  \\
-        Box length               & $L^* = (N/\rho^*)^{1/3}$          & 8.398   \\
+        Box length               & $L^* = (N/\rho^*)^{1/3}$          & 6.718   \\
         Time step                & $\delta t^*$                      & 0.005   \\
         Cutoff radius            & $r_c^*$                           & 2.5     \\
         Skin radius              & $r_s^*$                           & 3.0     \\
@@ -188,14 +191,7 @@ Table~\ref{tab:integrated_params} lists the parameters used throughout the proje
         $g(r)$ sample interval   & steps between RDF frames          & 10      \\
         $g(r)$ frames averaged   & $N_\text{prod} / \text{interval}$ & 200     \\
         RDF bins                 & $n_b$                             & 200     \\
-        \midrule
-        \multicolumn{3}{l}{\textit{Krypton physical parameters}} \\
-        LJ diameter              & $\sigma_\text{Kr}$                & 3.65\,\AA \\
-        LJ well depth            & $\varepsilon_\text{Kr}/k_B$       & 162.46\,K \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-The skin thickness $r_s^* - r_c^* = 0.5\,\sigma$ means the rebuild threshold is $0.25\,\sigma$. At $T^* = 1.0$ with $\delta t^* = 0.005$, this threshold is crossed roughly every 6 to 8 steps, so the neighbour list is reused for around 85\% of all force evaluations. The $g(r)$ is sampled from 100 frames in the test run and 200 frames in the Kr runs, spread over enough production time for the peaks to converge smoothly.
-
-The full source code is in \texttt{md\_engine.py}, which accompanies this report.
