@@ -120,7 +120,12 @@ Here the character of the $g(r)$ changes qualitatively. The first peak is now br
 This is the hallmark of the \textbf{solid-to-liquid transition}. The FCC lattice has collapsed and atoms are no longer confined to fixed sites; instead they diffuse freely through the system. The first peak survives because liquid atoms still cannot overlap each other (the LJ repulsive core enforces a minimum approach distance), so there is always a well-defined first coordination shell even in a disordered liquid. Beyond that shell, there is no further structural information.
 
 \subsubsection{\texorpdfstring{$T = 162.46$\,K ($T^* = 1.000$): Liquid}{T = 162.5 K: Liquid}}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{figures/melting_gr_162k.pdf}
+    \caption{g(r) of Kr at T* = 1.0 (162.46 K)}
+    \label{fig:placeholder}
+\end{figure}
 The final $g(r)$ is unambiguously liquid. There is one broad first peak centred near $r \approx 4$\,\AA, a weak second shoulder near $r \approx 7.5$\,\AA, and then a flat line at $g(r) = 1.0$. No further structure survives. The system has \emph{short-range order only}: a liquid atom knows its immediate neighbours are about 4\,\AA\ away, but has no information about where atoms beyond $\sim 8$\,\AA\ sit.
 
 The peak value at this temperature ($g \approx 2.7$) is the same as at $T^* = 0.8$, which is consistent with both being in the liquid phase: once melting is complete, raising the temperature further primarily widens and lowers the first peak rather than dramatically changing its height.
@@ -133,42 +138,27 @@ In a real open-atmosphere experiment, heating liquid Krypton past its boiling po
 
 \subsection{Estimating the Melting Point}
 
-The $g(r)$ evolution makes it clear that the transition does not happen at a single temperature but over a range. We can bracket it using two observations:
+To estimate the melting point, we track the height of the first minimum of $g(r)$ as a function of temperature. In a solid, successive coordination shells produce sharp peaks separated by deep minima (first-minimum height $\approx 0$); as the system melts, interstitial atoms fill these minima and the height rises toward unity. We search for this minimum in the range $1.2 < r^* < 1.8$ at each temperature and record its value.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{figures/melting_point_analysis.pdf}
+    \caption{g(rmin) vs T* plot}
+    \label{fig:melt}
+\end{figure}
 
-\begin{enumerate}
-    \item The last temperature with clearly resolved multiple coordination shells is $T = 97.48$\,K ($T^* \approx 0.60$).
-    \item The first temperature with a purely liquid-like $g(r)$ (single broad peak, no further shells) is $T = 129.97$\,K ($T^* \approx 0.80$).
-\end{enumerate}
-
-This places the melting transition at approximately:
+Figure~\ref{fig:melt} shows the resulting curve. At low temperatures ($T^* \lesssim 0.2$), the first minimum is essentially zero, confirming a well-ordered solid. The height then rises monotonically, with the steepest increase occurring between $T^* \approx 0.55$ and $T^* \approx 0.75$, indicating rapid structural disordering. Above $T^* \approx 0.75$ the curve flattens and saturates near $0.60$--$0.62$, characteristic of a fully liquid $g(r)$ with no residual shell structure. The melting point is identified as the midpoint of this steep rise:
 \begin{equation}
     T^*_\text{melt} \approx 0.70 \quad \Rightarrow \quad
     T_\text{melt} \approx 0.70 \times 162.46\,\text{K} \approx 114\,\text{K}
     \label{eq:melt_est}
 \end{equation}
-
 This estimate agrees well with two reference values:
 \begin{itemize}
     \item \textbf{LJ melting point} at $\rho^* = 0.8442$: $T^*_\text{melt} \approx 0.69$ from the established LJ phase diagram.
     \item \textbf{Experimental melting point of Krypton} at atmospheric pressure: $T_\text{melt}^\text{exp} = 115.79$\,K.
 \end{itemize}
-
 The agreement with the experimental value (roughly 1.5\,K off) is very good given the resolution of our temperature stepping. This validates the Lennard-Jones model for noble gas systems: despite being a two-parameter pairwise potential with no quantum corrections, it places the melting point of Krypton to within 2\% of experiment.
 
-\begin{table}[H]
-    \centering
-    \caption{Comparison of simulated melting point with LJ theory and experiment.}
-    \label{tab:melt_compare}
-    \begin{tabular}{lcc}
-        \toprule
-        \textbf{Source} & \textbf{$T^*_\text{melt}$} & \textbf{$T_\text{melt}$ (K)} \\
-        \midrule
-        This simulation (from $g(r)$ bracket) & $\approx 0.70$ & $\approx 114$ \\
-        LJ phase diagram at $\rho^* = 0.8442$ & $\approx 0.69$ & $\approx 112$ \\
-        Experiment (Krypton at 1 atm)          & N/A            & $115.79$ \\
-        \bottomrule
-    \end{tabular}
-\end{table}
 
 \subsection{Why Is This a First-Order Transition?}
 

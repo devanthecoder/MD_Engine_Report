@@ -23,18 +23,874 @@ The contributors facilitated the implementations, analyses, interpretations, and
 %     \item ``How do I implement the Minimum Image Convention in NumPy?''
 % \end{enumerate}
 
+% Explain module 6 in detail and what to do in it and also how to approach it
+% Are these plots showing solid and liquid phase for krypton correct? Also say why are these plots looking like this. Why is it 0 initially and highest peak suddenly and then gradually decreasing peaks.
+% Give me test case code to test module-3 energy verification
+% Can you make the code for the function according to the paragraph that I just provided for module 6?
+% Explain how modules 1 and 2 are even being used in module 3 and why we are considering r_cutoff_sq in it
+% ```python
+%             forces[i] += f_vec
+%             forces[j] -= f_vec
+% ```
+% should the signs be -= and += repectively?
+
+\begin{enumerate}
+ 
+\item Explain me this: cutoff distance, shifted potential and reduced units in detail.
+ 
+\item What is the Lennard-Jones potential? What does it compute?
+      WHY --- Why model atoms with LJ? Why use reduced units? Why shift the potential at
+      the cutoff?
+      HOW --- How is the shifted LJ implemented? How is force/r returned?
+      EXTRAS --- Any physical intuition about the 12-6 form? What test did you run to
+      verify correctness?
+      I want you to answer these questions in detail using the sources provided.
+ 
+\item WHAT --- What is g(r)? What does it measure physically?
+      WHY --- Why can't temperature alone tell us if a system is solid or liquid?
+      HOW --- How is the histogram binned? How is the normalization applied?What is the MIC used for in this context?
+      EXTRAS --- What do sharp peaks vs.\ broad/decaying peaks mean physically?
+                 Statistical binning: why average over multiple frames?
+      I want you to answer these questions in detail using the sources provided.
+ 
+\item \# --- THE MAIN MD LOOP ---
+      \# 1. Setup: Define n\_cells, density, T\_target, dt, and steps.
+      \# 2. Initialize: Call generate\_fcc\_lattice and initialize\_velocities.
+      \# 3. Main Loop:
+      \#    - Call velocity\_verlet\_step
+      \#    - If in equilibration and step \% 10 == 0: call rescale\_velocities
+      \#    - Accumulate energy and temperature data for plotting.
+      n\_cells = 7,\; rho\_star = 0.8442,\; T\_target = 1.0
+ 
+\item Is there any other way to test the FCC lattice, or are the tests I have done
+      enough? Moreover, is there any other way to test the Minimum Image Convention and
+      also show it, or is my method enough?
+ 
+\item First few changes: sigma and epsilon as inputs, use \texttt{Kb} from
+      \texttt{scipy.constants} to get eps/kb. Next, use \texttt{Pool} from
+      \texttt{multiprocessing} to send the MD engine code for different temperatures
+      across multiple processes. Instead of using hardcoded T values, use T* values.
+      Default \texttt{[0.01, 0.2, 0.4, 0.6, 0.8, 1]}.
+
+\item Explain module 6 in detail and what to do in it and also how to approach it
+\item Are these plots showing solid and liquid phase for krypton correct? Also say why are these plots looking like this. Why is it 0 initially and highest peak suddenly and then gradually decreasing peaks.
+\item Give me a test case code to test module-3 energy verification.
+\item Can you make the code for the function according to the paragraph that I just provided for module 6?
+\item Explain how modules 1 and 2 are even being used in module 3 and why we are considering r\_cutoff\_sq in it
+\item \texttt{forces[i] += f\_vec} and \texttt{forces[j] -= f\_vec} --- should the signs be \texttt{-=} and \texttt{+=} respectively?
+
+\item WHAT --- What is numerical integration? What does Velocity Verlet do?
+      WHY --- Why can't we solve the equations of motion analytically?
+              Why Velocity Verlet over, say, simple Euler integration?
+      HOW --- Walk through the 4-step VV algorithm.
+              How is energy conservation used as a reliability check?
+      EXTRAS --- What is a ``good'' time step? The 1-in-$10^4$ fluctuation rule.
+                 What does energy drift look like when $dt$ is too large?
+                 What is the reduced time unit $t^*$ and how is $dt$ chosen?\\
+      I want you to answer these questions with respect to the sources attached.
+ 
+\item WHAT --- What is the Maxwell-Boltzmann distribution?
+              What is velocity rescaling? What is equilibration?
+      WHY --- Why can't we just give all atoms the same speed?
+              Why zero the net momentum before running?
+              Why run an equilibration phase before collecting data?
+      HOW --- How is Gaussian sampling used to initialise velocities?
+              How does the rescaling thermostat work (lambda factor)?
+              What are the equilibration and production phases?
+      EXTRAS --- Energy compensation: $K^*$ and $U^*$ oscillate anti-phase.
+                 Plot of $K^*$, $U^*$, $E^*$ all on one graph.
+                 What happens to $E^*$ during equilibration vs production?\\
+      Answer these with respect to the sources attached.
+ 
+\item Code submitted for simplification and visualisation improvement --- see Listing
+      The existing LJ potential plotting code was submitted with the request:
+      \textit{``First simplify this code, then I want to see the shift clearly
+      at $r^* = 2.5$. I want the normal plot, then a zoomed-in plot, and the
+      last shaded plot. I want the code to be as small as possible.''}
+ 
+\item Code submitted for physical explanation and diagnostics --- see Listing
+      The assembled main MD loop was submitted with the question:
+      \textit{``Explain this code physically.''} followed by targeted
+      follow-up questions: \textit{``Explain the initial trend in PE and KE ---
+      why is PE falling down?''} and \textit{``Velocity Verlet integrator
+      conserves total energy --- why does this conserve energy?''}
+ 
+\item We track this safety condition explicitly. After each Velocity Verlet
+      step, we measure the maximum displacement $\Delta r_\text{max}$ of any
+      atom from its position at the last rebuild. Rebuild if:
+      $\Delta r_\text{max} > (r_s - r_c)/2 = \delta_\text{skin}/2$.
+      The factor of 2 appears because two atoms can simultaneously drift by
+      $\delta_\text{skin}/2$ toward each other, collectively covering the entire
+      buffer in a single step. Dividing by 2 is the conservative safe-guard.\\
+      \textit{Explain these in simple terms.}
+      Followed by: \textit{``Refer to the attached books and give me the exact
+      reason for the $/2$ factor.''}
+
+\item \textit{``We have this project [problem statement attached] and our goal is to make a
+    report. Read the problem statement to understand the project, then read the existing report
+    code (LaTeX). Verify that the tasks I forwarded are exactly the tasks that have to be written in
+    the report. In general, for each implementation section we need to ask: what are we doing, why
+    are we doing it, and how are we doing it. The main goal is to not explain the physics in a
+    boring manner --- we want to build intuition in the reader. Treat this as the most important
+    aspect. Do not make any assumptions; if you have any doubts, ask me.''}
+ 
+    \item \textit{``The next few questions are on performance optimisation. I want you to answer
+    these in detail. WHAT --- What is the O(N\textsuperscript{2}) bottleneck? What is a Verlet
+    neighbour list? What is NumPy vectorization? WHY --- Why does the naive force loop become
+    a problem at N\,=\,500? Why does the skin radius allow infrequent rebuilds? Why does the
+    shifted-force potential improve energy conservation? HOW --- How is the neighbour list built?
+    When is it rebuilt? How does vectorization replace Python for-loops?''}
+ 
+    \item \textit{``Explain the shifted-force potential and how it differs from the shifted potential.
+    Why should we shift the force as well?''}
+ 
+    \item \textit{``I have the diagnostic and stability analysis section to write [LaTeX template
+    attached]. The required content is: (1) Energy Conservation --- $E^*$ should be a flat line
+    with no systematic drift; (2) Fluctuation Metric --- $\Delta E^*/\langle E^*\rangle \sim
+    10^{-4}$; (3) Zero Momentum --- $|\mathbf{P}^*| \approx 0$ throughout; (4) $K^*$, $U^*$,
+    $E^*$ all on one plot. Here are my energy and momentum plots [images attached]. Write the
+    section. Remove the em-dashes, give a final conclusion for this section, and remove all
+    unnecessary jargon like `symplectic' that we haven't introduced.''}
+ 
+    \item \textit{``Do your sources mention anything about the coordination number calculation?
+    I integrated $g(r)$ for a reduced temperature $T^* = 0.2$, and I want to know why my fifth
+    coordination number is computed as 27. something instead of 24. Here is the table of values I
+    obtained along with the ideal values [table attached].''}
+ 
+    \item \textit{``Okay, so I know I have to sum up the velocities at every step for momentum,
+but where do I determine the mass of the atom from? Is the following code correct (my
+momentum is an array of vectors)?''}
+
+\begin{verbatim}
+self.pot_E[step] = pe
+self.P[step]     = np.sum(vel, axis=0)
+self.kin_E[step] = 0.5*np.sum(vel*vel)
+self.tot_E[step] = self.pot_E[step] + self.kin_E[step]
+\end{verbatim}
+ 
+    \item \textit{``Here is my diagnostics function [code attached]. How is this code? Fix any
+    bugs and return the corrected version.''}
+      
+\end{enumerate}
+
 \subsection{AI-Generated Code}
 
 % Include the raw code produced by the AI tool:
 % \begin{lstlisting}[caption={Raw AI-generated code for [function name].}]
 % [PASTE CODE HERE]
 % \end{lstlisting}
+\begin{lstlisting}[
+    caption={Prompt 4 --- AI response confirming and completing
+             \texttt{calculate\_lj\_properties} (shifted-force LJ).},
+    label={lst:ai_lj}]
+import numpy as np
+ 
+def calculate_lj_properties(r_sq, r_cutoff_sq):
+    inv_rc2  = 1.0 / r_cutoff_sq
+    inv_rc6  = inv_rc2**3
+    inv_rc12 = inv_rc6**2
+    phi_cut  = 4 * (inv_rc12 - inv_rc6)
+ 
+    inv_r2  = 1.0 / r_sq
+    inv_r6  = inv_r2**3
+    inv_r12 = inv_r6**2
+    phi     = 4 * (inv_r12 - inv_r6)
+ 
+    force_by_r  = 48 * inv_r2  * (inv_r12 - 0.5 * inv_r6)
+    force_by_rc = 48 * inv_rc2 * (inv_rc12 - 0.5 * inv_rc6)
+ 
+    force_by_r = force_by_r - force_by_rc
+    potE = phi - phi_cut + 0.5 * force_by_rc * (r_sq - r_cutoff_sq)
+ 
+    return potE, force_by_r
+\end{lstlisting}
+ 
+% ------------------------------------------------------------------
+\begin{lstlisting}[
+    caption={Prompt 5 --- AI-generated main MD loop skeleton.},
+    label={lst:ai_mainloop}]
+n_cells       = 7
+rho_star      = 0.8442
+T_target      = 1.0
+dt            = 0.005
+total_steps   = 2000
+r_cutoff      = 2.5
+r_cutoff_sq   = r_cutoff**2
+r_skin        = 3.2
+r_skin_sq     = r_skin**2
+ 
+pos, L        = generate_fcc_lattice(n_cells, rho_star)
+N             = len(pos)
+pos_ref       = pos.copy()
+vel           = initialize_velocities(N, T_target)
+ 
+energies      = []
+temperatures  = []
+pe_list       = []
+ 
+neighbour_list = update_neighbor_list(pos, L, r_skin_sq)
+pe, force      = calculate_forces_optimized(pos, neighbour_list,
+                                            L, r_cutoff_sq)
+ 
+rebuild_threshold_sq = 0.25 * (r_skin - r_cutoff)**2
+ 
+for step in range(total_steps):
+    pos, vel, pe, force = velocity_verlet_step_opt(
+        pos, vel, force, dt, L, r_cutoff_sq, neighbour_list)
+ 
+    disp_sq = np.sum((pos - pos_ref)**2, axis=1)
+    if np.any(disp_sq > rebuild_threshold_sq):
+        neighbour_list = update_neighbor_list(pos, L, r_skin_sq)
+        pos_ref = pos.copy()
+ 
+    if step < total_steps // 2 and step % 10 == 0:
+        vel = rescale_velocities(vel, T_target)
+ 
+    ke = calculate_kinetic_energy(vel)
+    energies.append(ke + pe)
+    pe_list.append(pe)
+    temperatures.append(2 * ke / (3 * N))
+\end{lstlisting}
+ 
+% ------------------------------------------------------------------
+\begin{lstlisting}[
+    caption={Prompt 6 --- AI-suggested nearest-neighbour test for the FCC lattice.},
+    label={lst:ai_fcc_test}]
+from scipy.spatial.distance import cdist
+ 
+dists = cdist(positions, positions)
+np.fill_diagonal(dists, np.inf)   # ignore self-distances
+nn_dist = dists.min(axis=1)
+ 
+a           = L / n_cells
+expected_nn = a / np.sqrt(2)
+ 
+print(f"Expected nearest-neighbor distance: {expected_nn:.4f}")
+print(f"Got (mean): {nn_dist.mean():.4f},  Std: {nn_dist.std():.6f}")
+\end{lstlisting}
+ 
+% ------------------------------------------------------------------
+\begin{lstlisting}[
+    caption={Prompt 7 --- AI-refactored \texttt{MDSimulation} class with physical
+             unit inputs and multiprocessing temperature sweep.},
+    label={lst:ai_engine}]
+import numpy as np
+from multiprocessing import Pool
+from scipy.constants import k as k_B
+import os
+ 
+class MDSimulation:
+    def __init__(self,
+                 sigma          = 3.65,
+                 eps            = 0.0140,
+                 n_cells        = 4,
+                 rho_star       = 0.8442,
+                 dt             = 0.005,
+                 r_cutoff       = 2.5,
+                 r_skin         = 3.0,
+                 equil_steps    = 2000,
+                 prod_steps     = 2000,
+                 rescale_interval = 10,
+                 rdf_interval   = 10,
+                 rdf_bins       = 200,
+                 t_star_values  = None,
+                 n_workers      = None):
+ 
+        self.sigma    = sigma
+        self.eps      = eps
+        self.eps_kb   = eps * (1.602e-19 / k_B)   # eV -> Kelvin
+        self.n_cells  = n_cells
+        self.rho_star = rho_star
+        self.dt       = dt
+        self.r_cutoff = r_cutoff
+        self.r_skin   = r_skin
+        self.r_cutoff_sq = r_cutoff**2
+        self.r_skin_sq   = r_skin**2
+        self.thresh_sq   = (0.5 * (r_skin - r_cutoff))**2
+        self.equil_steps = equil_steps
+        self.prod_steps  = prod_steps
+        self.rescale_interval = rescale_interval
+        self.rdf_interval     = rdf_interval
+        self.rdf_bins         = rdf_bins
+ 
+        self.t_star_values = (t_star_values if t_star_values is not None
+                              else [0.01, 0.2, 0.4, 0.6, 0.8, 1.0])
+ 
+        if n_workers is None:
+            cpu_count     = os.cpu_count() or 1
+            self.n_workers = min(len(self.t_star_values), cpu_count)
+        else:
+            self.n_workers = n_workers
+ 
+        self.diagnostics = {}   # T_star -> dict{kin_E, pot_E, tot_E, P}
+ 
+    def run(self):
+        worker_args = [(t_star, self) for t_star in self.t_star_values]
+        with Pool(processes=self.n_workers) as pool:
+            results = pool.map(_run_one_temperature, worker_args)
+        return results
+\end{lstlisting}
+
+\begin{lstlisting}
+# Module 6 - Complete Explanation
+
+## What Module 6 is About
+
+All previous modules built the simulation engine. Module 6 is about extracting physical meaning from the simulation. You have been running a system of atoms - now you need to answer: is it a solid or a liquid, and how do the atoms move?
+
+The module gives you two tools to answer this - you only need to implement one:
+
+- Radial Distribution Function g(r) - structural analysis
+- Mean Square Displacement (MSD) - dynamical analysis
+
+## Goal
+
+Run the simulation at increasing temperatures:
+T* = 0.2 -> 0.4 -> 0.6 -> 0.8 -> 1.0
+
+## g(r)
+
+g(r) measures how atoms are arranged.
+
+Solid:
+Sharp peaks -> long range order
+
+Liquid:
+Broad peak -> no long range order
+
+## Why g(r) = 0 at small r
+Atoms cannot overlap due to strong repulsion.
+
+## Why g(r) -> 1 at large r
+System becomes uniform.
+
+## Steps
+
+n_bins = 75
+r_max  = L / 2.0
+dr     = r_max / n_bins
+
+dr_vec = apply_minimum_image(...)
+r_sq   = sum(...)
+r_dist = sqrt(...)
+
+valid_dist = r_dist[r_dist < r_max]
+k          = (valid_dist / dr).astype(int)
+g_hist     = bincount(...)
+
+r_centers = (...)
+shell_vol = 4 * pi * r^2 * dr
+g_r       = (...)
+
+## MSD
+
+MSD(t) = (1/N) * sum |r_i(t) - r_i(0)|^2
+
+Solid:
+Flat
+
+Liquid:
+Linear increase
+
+## Unwrapped coordinates
+
+delta = pos_new - pos_prev
+delta -= L * round(delta / L)
+pos_unwrapped += delta
+
+## Checklist
+
+- g(r) -> 1 at large r
+- 50 <= n_bins <= 100
+- r_max = L/2
+\end{lstlisting}
+
+\begin{lstlisting}
+Both plots are correct and physically meaningful. Let me explain everything you're seeing.
+
+---
+
+Why is g(r) = 0 initially?
+
+This is correct physics. At very small r, g(r) = 0 because two atoms physically cannot overlap. The Lennard-Jones repulsion term (1/r^12) becomes extremely large at short distances, so no atom can be found very close to another. The zero region from 0 to about 3.5 Angstrom is the exclusion zone around each atom.
+
+---
+
+Why is there a sudden tall first peak?
+
+The first peak (around 4 Angstrom) represents the nearest neighbour shell - the atoms closest to a given atom.
+
+It is the highest peak because:
+- nearest neighbours are the most likely atoms to be found
+- they are tightly packed and well-defined
+- 4 Angstrom is about 1.12 * sigma_Kr (3.65 Angstrom), which is the equilibrium distance of the Lennard-Jones potential
+
+---
+
+Why do peaks decrease and approach 1?
+
+Each peak corresponds to a shell of neighbours. As distance increases, the correlation weakens. At large r, g(r) approaches 1, meaning the system becomes uniform and random.
+
+---
+
+T* = 0.4 (solid)
+
+Multiple sharp peaks at about 4, 7.3, 10, 11.5 Angstrom correspond to lattice shells of the FCC crystal. This shows long-range order, which is characteristic of a solid.
+
+---
+
+T* = 1.0 (liquid)
+
+There is one sharp first peak, followed by a broad second peak and then g(r) quickly approaches 1. This indicates short-range order only, which is characteristic of a liquid.
+
+The first peak is broader and shorter than in the solid case, showing increased thermal motion.
+
+---
+
+Comparison summary
+
+Solid (T* = 0.4):
+- First peak ~3.5, narrow
+- Multiple sharp peaks
+- Slowly approaches 1
+
+Liquid (T* = 1.0):
+- First peak ~2.7, broader
+- One broad peak then flat
+- Quickly approaches 1
+
+---
+
+Both plots clearly show the solid-to-liquid transition and are suitable for inclusion in a report.
+\end{lstlisting}
+
+\begin{lstlisting}
+
+# Calculate kinetic energy
+def calculate_kinetic_energy(vel):
+    """K* = 0.5 * sum(v^2)   [m* = 1 in reduced units]"""
+    return 0.5 * np.sum(vel**2)
+
+# System setup
+n_cells     = 3           # N = 4 * 3^3 = 108 atoms
+rho_star    = 0.8         # reduced density
+dt          = 1e-3        # time step
+r_cutoff_sq = 2.5**2      # standard LJ cutoff rc = 2.5 in reduced units
+
+# Initialize positions on the FCC lattice
+pos, L = generate_fcc_lattice(n_cells, rho_star)
+
+# Initialize velocities at T* = 1.0
+# Draw each velocity component from a Gaussian with std = sqrt(T*)
+# Subtract the mean so the whole block has zero net momentum
+vel  = np.random.randn(*pos.shape) * np.sqrt(1.0)
+vel -= vel.mean(axis=0)
+
+# Calculate initial forces
+pe, force = calculate_total_force(pos, L, r_cutoff_sq)
+
+# Run 200 steps and save total energy
+energies = []
+for step in range(200):
+    pos, vel, pe, force = velocity_verlet_step(
+                            pos, vel, force, dt, L, r_cutoff_sq)
+    ke = calculate_kinetic_energy(vel)
+    energies.append(ke + pe)       # E = KE + PE
+
+# RMS energy fluctuation check
+# RMS(E) = sqrt(mean((E - <E>)^2))
+# Target: RMS(E) / |<E>| < 1e-4
+E         = np.array(energies)
+E_mean    = E.mean()
+E_rms     = np.sqrt(np.mean((E - E_mean)**2))
+rel_drift = E_rms / abs(E_mean)
+
+print(f"Mean E        : {E_mean:.4f}")
+print(f"RMS  E        : {E_rms:.6f}")
+print(f"Relative drift: {rel_drift:.2e}  (target < 1e-4)")
+print("TEST PASSED" if rel_drift < 1e-4 else "TEST FAILED, reduce dt")
+
+# Plot deviation from mean
+# Flat line around zero implies energy conservation
+# Any upward or downward trend implies drift
+E_deviation = E - E_mean
+
+plt.figure(figsize=(8, 6))
+plt.plot(np.arange(len(E)), E_deviation,
+         color='blue', linewidth=2,
+         label='Total energy deviation from mean')
+plt.axhline(0, color='gray', linewidth=2, linestyle='--')
+plt.xlabel('Time step')
+plt.ylabel('E - <E>  (reduced units)')
+plt.title(f'Energy conservation | '
+          f'<E> = {E_mean:.4f} | '
+          f'RMS drift = {rel_drift:.2e}')
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+\end{lstlisting}
+
+\begin{lstlisting}
+If you want to see exactly how that textbook paragraph translates into code, we can rewrite the function to follow its step-by-step instructions.
+
+Instead of using np.histogram, we manually calculate the distance channel (k) and increment the histogram, while still using NumPy for speed.
+
+Here is the function:
+
+def calculate_rdf(pos, box_length, dr, r_max):
+    """
+    Calculates the radial distribution function g(r)
+    using manual binning.
+    """
+    N = len(pos)
+    rho = N / (box_length**3)
+    
+    # Step (a): Setup intervals
+    n_bins = int(round(r_max / dr))
+    g_hist = np.zeros(n_bins)
+    
+    # Step (b): Compute pair distances
+    dr_vec = apply_minimum_image(pos[:, None, :], pos[None, :, :], box_length)
+    r_sq = np.sum(dr_vec**2, axis=2)
+    r_dist = np.sqrt(r_sq[np.triu_indices(N, k=1)])
+    
+    valid = r_dist[r_dist < r_max]
+    k = (valid / dr).astype(int)
+    
+    # Step (c): Build histogram
+    counts = np.bincount(k, minlength=n_bins)
+    g_hist += counts
+    
+    # Step (d): Normalize
+    r_centers = (np.arange(n_bins) + 0.5) * dr
+    shell_vol = 4 * np.pi * (r_centers**2) * dr
+    
+    g_r = (2.0 * g_hist) / (N * rho * shell_vol)
+    
+    return r_centers, g_r
+
+---
+
+How this matches the textbook:
+
+(a) Create bins:
+We define n_bins and initialize g_hist as zeros.
+
+(b) Compute k:
+k = int(r_ij / dr) is done using (valid / dr).astype(int).
+
+(c) Increment:
+np.bincount(k) counts how many values fall in each bin.
+
+(d) Normalize:
+We divide by shell volume and density to ensure g(r) -> 1 at large r.
+\end{lstlisting}
+
+
+\begin{lstlisting}
+No, the signs are correct as written. Let me show you why.
+
+## What dr points to matters
+
+dr = apply_minimum_image(pos[i], pos[j], box_length)
+
+From the definition:
+dr = pos_j - pos_i
+
+So dr is a vector pointing from i toward j.
+
+---
+
+## Case 1: Repulsion (atoms too close)
+
+atom i        atom j
+   O ---------> O
+        dr
+
+force_by_r is positive
+
+f_vec = force_by_r * dr
+
+This means f_vec points toward j.
+
+If we do:
+forces[i] += f_vec
+
+then atom i is pushed toward j, which seems incorrect for repulsion.
+
+---
+
+## The resolution
+
+The Lennard-Jones force comes from:
+
+F = -d(phi)/dr
+
+The full vector form gives:
+
+F_i = - d(phi)/dr * (dr_vec / r)
+
+where dr_vec = r_j - r_i
+
+At small r:
+- d(phi)/dr is negative
+- so F becomes positive in magnitude
+
+The standard LJ implementation:
+
+force_by_r = 48 * inv_r2 * (inv_r12 - 0.5 * inv_r6)
+
+already includes the correct physics.
+
+---
+
+## Important point
+
+The expression:
+
+f_vec = force_by_r * dr
+
+actually gives the force on j due to i.
+
+So the correct updates are:
+
+forces[j] += f_vec
+forces[i] -= f_vec
+
+---
+
+## Example
+
+i at x = 0
+j at x = 0.9
+
+dr = [0.9, 0, 0]
+
+force_by_r is positive
+
+f_vec = positive * dr = points right
+
+Correct updates:
+
+forces[i] -= f_vec   -> i moves left (away from j)
+forces[j] += f_vec   -> j moves right (away from i)
+
+This matches physical repulsion.
+
+---
+
+## Final correct form
+
+dr = apply_minimum_image(pos[i], pos[j], box_length)
+r_sq = dot(dr, dr)
+
+pot, force_by_r = calculate_lj_properties(r_sq, None)
+f_vec = force_by_r * dr
+
+forces[i] -= f_vec
+forces[j] += f_vec
+
+total_pe += pot
+
+---
+
+Newton's third law is satisfied and the force directions are correct.
+\end{lstlisting}
+
+\begin{lstlisting}[
+    caption={ AI-simplified LJ potential and force
+             visualisation code, returned after the request to reduce
+             the plotting script to $\sim$45 lines with three panels
+             (full potential, zoomed cutoff region, shaded force plot).},
+    label={lst:teja_lj_plot}]
+import numpy as np
+import matplotlib.pyplot as plt
+ 
+r_cutoff = 2.5
+rc2 = r_cutoff**2
+ 
+def lj_phi(r):
+    ir2 = 1.0 / r**2
+    ir6 = ir2**3
+    return 4 * (ir6**2 - ir6)
+ 
+def lj_force_over_r(r):
+    ir2 = 1.0 / r**2
+    ir6 = ir2**3
+    return 48 * ir2 * (ir6**2 - 0.5 * ir6)
+ 
+r = np.linspace(0.95, 3.0, 1000)
+mask = r < r_cutoff
+phi_raw  = lj_phi(r)
+phi_sh   = np.where(mask, phi_raw - lj_phi(r_cutoff), np.nan)
+force_r  = np.where(mask, lj_force_over_r(r),         np.nan)
+ 
+fig, axes = plt.subplots(1, 3, figsize=(16, 4.5))
+ 
+# Panel 1 — full potential
+ax = axes[0]
+ax.plot(r, phi_raw, 'k--', label=r'Unshifted $\phi^*$')
+ax.plot(r, phi_sh,  'b-',  label=r'Shifted $\phi^*_\mathrm{shift}$')
+ax.axvline(r_cutoff, color='gray', ls='--', label=r'$r_c^*=2.5$')
+ax.axhline(0, color='gray', lw=0.5)
+ax.set(xlim=(0.95,3.0), ylim=(-1.5,1.5),
+       xlabel=r'$r^*$', ylabel=r'$\phi^*$', title='LJ Potential')
+ax.legend(fontsize=8)
+ 
+# Panel 2 — zoom near cutoff to show shift gap
+ax2 = axes[1]
+ax2.plot(r, phi_raw, 'k--')
+ax2.plot(r, phi_sh,  'b-')
+ax2.axvline(r_cutoff, color='gray', ls='--')
+ax2.set(xlim=(2.3, 2.7), ylim=(-0.025, 0.005),
+        xlabel=r'$r^*$', ylabel=r'$\phi^*$',
+        title=r'Zoom: shift $\Delta = \phi^*(r_c^*)$')
+phi_rc = lj_phi(r_cutoff)
+ax2.annotate('', xy=(r_cutoff, 0), xytext=(r_cutoff, phi_rc),
+             arrowprops=dict(arrowstyle='<->', color='orange', lw=1.5))
+ax2.text(r_cutoff+0.02, phi_rc/2,
+         r'$\Delta\approx0.0016$', color='orange', fontsize=8)
+ 
+# Panel 3 — shaded force/r
+ax3 = axes[2]
+ax3.fill_between(r, 0, force_r, where=force_r>0,
+                 alpha=0.3, color='red',  label='Repulsive')
+ax3.fill_between(r, 0, force_r, where=force_r<0,
+                 alpha=0.3, color='blue', label='Attractive')
+ax3.plot(r, force_r, 'r-', label=r'$F^*/r^*$')
+ax3.axvline(r_cutoff, color='gray', ls='--')
+ax3.axhline(0, color='gray', lw=0.5)
+ax3.set(xlim=(0.95,3.0), ylim=(-6,6),
+        xlabel=r'$r^*$', ylabel=r'$F^*/r^*$', title='LJ Force')
+ax3.legend(fontsize=8)
+ 
+plt.tight_layout(pad=2.0)
+plt.savefig('m1_lj_curves.pdf', dpi=150)
+plt.show()
+\end{lstlisting}
+ 
+\begin{lstlisting}[
+    caption={ AI-generated complete main MD loop
+             with energy and temperature diagnostic plots, returned
+             after the main loop skeleton was submitted for physical
+             explanation.},
+    label={lst:teja_mainloop}]
+n_cells   = 4;   rho_star = 0.8442;  T_target = 1.0
+dt        = 0.005;  total_steps = 2000
+r_cutoff  = 2.5;    r_cutoff_sq = r_cutoff**2
+r_skin    = 3.2;    r_skin_sq   = r_skin**2
+ 
+pos, L          = generate_fcc_lattice(n_cells, rho_star)
+N               = len(pos)
+vel             = initialize_velocities(N, T_target)
+neighbour_list  = update_neighbor_list(pos, L, r_skin_sq)
+pe, force       = calculate_forces_optimized(pos, neighbour_list,
+                                             L, r_cutoff_sq)
+pos_ref              = pos.copy()
+rebuild_threshold_sq = 0.25 * (r_skin - r_cutoff)**2
+ 
+energies, temperatures, pe_list, ke_list = [], [], [], []
+ 
+for step in range(total_steps):
+    pos, vel, pe, force = velocity_verlet_step_opt(
+        pos, vel, force, dt, L, r_cutoff_sq, neighbour_list)
+ 
+    if np.any(np.sum((pos - pos_ref)**2, axis=1) > rebuild_threshold_sq):
+        neighbour_list = update_neighbor_list(pos, L, r_skin_sq)
+        pos_ref = pos.copy()
+ 
+    if step < total_steps // 2 and step % 10 == 0:
+        vel = rescale_velocities(vel, T_target)
+ 
+    ke = calculate_kinetic_energy(vel)
+    energies.append(ke + pe)
+    ke_list.append(ke)
+    pe_list.append(pe)
+    temperatures.append(2 * ke / (3 * N))
+ 
+fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+axes[0].plot(ke_list,  label='K*', alpha=0.8)
+axes[0].plot(pe_list,  label='U*', alpha=0.8)
+axes[0].plot(energies, label='E*', alpha=0.9, lw=1.5)
+axes[0].axvspan(0,              total_steps//2, alpha=0.08,
+                color='orange', label='Equilibration')
+axes[0].axvspan(total_steps//2, total_steps,   alpha=0.08,
+                color='blue',   label='Production')
+axes[0].set(title=f'K*, U*, E*  (N={N})',
+            xlabel='Time Step', ylabel='Energy (reduced units)')
+axes[0].legend(fontsize=9)
+ 
+axes[1].plot(temperatures, color='tab:red')
+axes[1].axhline(T_target, color='k', ls='--', lw=1,
+                label=f'T* = {T_target}')
+axes[1].axvspan(0,              total_steps//2, alpha=0.08, color='orange')
+axes[1].axvspan(total_steps//2, total_steps,   alpha=0.08, color='blue')
+axes[1].set(title='Temperature vs Time Step',
+            xlabel='Time Step', ylabel='T*')
+axes[1].legend(fontsize=9)
+ 
+plt.tight_layout()
+plt.savefig('md_results.pdf', dpi=300)
+plt.show()
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Corrected \texttt{run\_diagnostics} method as returned by Claude.},
+                   label={lst:ai_diagnostics}]
+def run_diagnostics(self, output_files=["energy_plot.pdf",
+                                        "momentum_plot.pdf"]):
+    steps_arr = np.arange(self.equil_steps + self.prod_steps)
+ 
+    # --- Energy plot ---
+    plt.figure()
+    plt.plot(steps_arr, self.kin_E,
+             label='Kinetic Energy',   color='blue',  alpha=0.6)
+    plt.plot(steps_arr, self.pot_E,
+             label='Potential Energy', color='green', alpha=0.6)
+    plt.plot(steps_arr, self.tot_E,
+             label='Total Energy',     color='red',   linewidth=2)
+    plt.xlabel('Step')
+    plt.ylabel('Energy (reduced units)')
+    plt.title('Energy Conservation | ' + str(len(self.pos)) + ' atoms')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig(output_files[0], dpi=150)
+    plt.show()
+ 
+    # --- Momentum plot ---
+    P_mag = np.linalg.norm(self.P, axis=1)
+    plt.figure()
+    plt.plot(steps_arr, P_mag,
+             label='|P*|', color='black', linewidth=2)
+    plt.xlabel('Step')
+    plt.ylabel('Total Momentum magnitude (reduced units)')
+    plt.title('Momentum Conservation | ' + str(len(self.pos)) + ' atoms')
+    plt.yscale('log')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig(output_files[1], dpi=150)
+    plt.show()
+ 
+    # --- Fluctuation metric (production phase only) ---
+    E_prod  = self.tot_E[self.equil_steps:]
+    E_mean  = np.mean(E_prod)
+    E_fluc  = np.std(E_prod)
+    rel_fluc = E_fluc / np.abs(E_mean)
+    if rel_fluc < 1e-4:
+        print(f"Relative fluctuation {rel_fluc:.2e} < 1e-4: "
+              f"system is numerically stable.")
+    else:
+        print(f"Relative fluctuation {rel_fluc:.2e} > 1e-4: "
+              f"system is numerically unstable.")
+ 
+    # --- Max momentum components ---
+    P_x = np.max(np.abs(self.P[:, 0]))
+    P_y = np.max(np.abs(self.P[:, 1]))
+    P_z = np.max(np.abs(self.P[:, 2]))
+    print(f"Max |P_x|={P_x:.2e}, |P_y|={P_y:.2e}, |P_z|={P_z:.2e}")
+\end{lstlisting}
 
 \subsection{Modifications and Physical Corrections}
 
-% Write a paragraph describing:
-%  - What was wrong or incomplete in the AI output.
-%  - What physical constraints were missing (e.g., shift at cutoff, MIC, normalisation).
-%  - What changes were made to fix it.
-
-% [WRITE HERE]
+The AI-generated code provided a useful starting point, though all outputs were carefully reviewed and tested before use. Some adjustments were made to variable names and function structures to fit the existing codebase. Key physical details were verified against course material and textbooks to ensure correctness. The final implementations were completed and validated by the contributors themselves.

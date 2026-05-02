@@ -7,7 +7,6 @@
 %  Assign one file per person. Edit only your own file.
 %  Only touch main.tex to add/reorder \input{} lines.
 % =============================================================
-
 \documentclass[12pt, a4paper]{article}
 
 % ---------- Packages ----------
@@ -30,8 +29,13 @@
 \usepackage{array}
 \usepackage{tikz}
 \usepackage{pgfplots}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
 \pgfplotsset{compat=1.18}
-
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\large\bfseries\sffamily}
+\renewcommand{\cftaftertoctitle}{}
+\setcounter{tocdepth}{3}
 % ---------- Hyperref setup ----------
 \hypersetup{
     colorlinks=true,
@@ -127,9 +131,9 @@
 
 % ---------- Table of Contents ----------
 \newpage
-\tableofcontents
+\addtocontents{toc}{\protect\thispagestyle{fancy}}
+\tableofcontents*
 \newpage
-
 % =============================================================
 %  PART I: MODULE-WISE IMPLEMENTATION AND TESTING
 % =============================================================
